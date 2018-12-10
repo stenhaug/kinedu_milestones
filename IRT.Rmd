@@ -1,0 +1,150 @@
+
+## IRT analysis
+
+Item Response Theory (IRT) is a nice way to look at the informativeness of individual items with respect to a latent dimension. Again we infer here that there is a latent dimension that is being recovered (which may not always be true). But if there is one, we can use it to pick out bum items. 
+
+### Sample (Crawling)
+
+Sample example. Consider the "gateo" (crawling) category.
+
+```{r}
+gateo <- filter(d, category == "Gateo") %>%
+  select(id, age, milestone, response) %>% 
+  spread(milestone, response)
+
+ltm::descript(select(gateo, -age, -id))
+```
+
+Fit simple Rasch model. 
+
+```{r}
+gateo_simple <- select(gateo, -age, -id)
+fit1 <- rasch(gateo_simple, 
+              constraint = cbind(length(gateo_simple) + 1, 1))
+coef(fit1, prob = TRUE, order = TRUE)
+plot(fit1)
+```
+
+Looks like the "backwards downstairs item" is very different. 
+
+Check goodness of fit.
+
+```{r}
+GoF.rasch(fit1, B = 199)
+```
+
+Significance value suggests that the model doesn't fit that well. 
+
+```{r}
+margins(fit1)
+```
+
+Unconstrained Rasch. We need a discrimination parameter that's different than one. 
+
+```{r}
+fit2 <- rasch(gateo_simple)
+coef(fit1, prob = TRUE, order = TRUE)
+anova(fit1, fit2)
+plot(fit2)
+```
+
+Now try an LTM.
+
+```{r}
+fit3 <- ltm(gateo_simple ~ z1)
+anova(fit2, fit3)
+coef(fit3, prob = TRUE, order = TRUE)
+plot(fit3)
+```
+
+Item information curves. 
+
+```{r}
+plot(fit3, type = "IIC")
+```
+
+Adjust by dropping backwards item. 
+
+```{r}
+fit3 <- ltm(select(gateo_simple, -`Baja las escaleras gateando de reversa`, 
+                   -`Cambia de dirección fácilmente al gatear`) ~ z1)
+plot(fit3)
+plot(fit3, type = "IIC")
+```
+
+### IRT Applied Broadly
+
+Check on total test info across items. 
+
+```{r}
+info <- d %>%
+  ungroup %>%
+  select(id, milestone, category, response) %>%
+  split(.$category) %>%
+  map_df(function(x) {
+    wide <- x %>%
+      mutate(response = as.numeric(response)) %>%
+      spread(milestone, response) %>%
+      select(-id, -category) %>%
+      data.frame 
+    
+    mod <- ltm(wide ~ z1)
+    
+    return(data_frame(category = x$category[1], 
+                      info = information(mod, range = 1:ncol(wide))$InfoTotal))
+  })
+
+
+n_milestones <- cats %>%
+  group_by(category) %>%
+  summarise(n_milestones = n())
+
+info <- left_join(info, n_milestones)
+
+info$category <- fct_reorder(info$category, info$info)
+
+ggplot(info, aes(x = category, y = info)) + 
+  geom_point(aes(size = n_milestones)) + 
+  coord_flip()
+```
+
+Now compute individual information for each question on each subtest. 
+
+```{r}
+m_info <- d %>%
+  ungroup %>%
+  select(id, milestone, category, response) %>%
+  split(.$category) %>%
+  map_df(function(x) {
+    wide <- x %>%
+      mutate(response = as.numeric(response)) %>%
+      spread(milestone, response) %>%
+      select(-id, -category) %>%
+      data.frame 
+    
+    mod <- ltm(wide ~ z1)
+    
+    m_info <- data_frame(category = x$category[1], 
+                         milestone = unique(x$milestone),
+                         index = 1:length(unique(x$milestone)))
+    
+    m_info <- m_info %>%
+      split(.$milestone) %>%
+      map_df(function(y) {
+        return(bind_cols(y, data.frame(info = 
+                                         information(mod, 
+                                                     range = 1:ncol(wide), 
+                                                     items = y$index)$InfoTotal)))})
+    
+    return(m_info)
+  })
+
+
+info$category <- fct_reorder(info$category, info$info)
+
+ggplot(info, aes(x = category, y = info)) + 
+  geom_point(aes(size = n_milestones)) + 
+  coord_flip()
+```
+
+

@@ -1,0 +1,761 @@
+---
+title: "Kinedu Milestone Report V2"
+author: "Mike Frank"
+date: "Rendered `r Sys.Date()`"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+
+# Intro
+
+```{r}
+knitr::opts_chunk$set(echo=FALSE, warning=FALSE, cache=TRUE, message=FALSE, 
+                      sanitize = TRUE)
+```
+
+```{r}
+library(tidyverse)
+# library(stringr)
+# library(ggthemes)
+# library(quantregGrowth)
+# library(forcats)
+# library(purrr)
+# library(ggrepel)
+# library(DT)
+select <- dplyr::select
+source("predictQR_fixed.R")
+# theme_set(theme_few())
+```
+
+```{r}
+d_raw <- readxl::read_xlsx("data/Kinedu Norming Survey Raw Data - May 15 2018.xlsx")
+```
+
+```{r}
+
+milestone_labels <- d_raw %>%
+  select(abs_183:color_679) %>%
+  slice(3) %>%
+  gather(code, name) %>%
+  mutate(short_name = str_sub(name, start = 0, end = 60))
+
+d <- d_raw %>%
+  rename(age = X__8, 
+         gestation = X__3,
+         kinder = X__4,
+         diagnosis = X__1, 
+         id = `Nombre variable`) %>%
+  slice(4:n()) %>% # drop two top label rows. 
+  select(-starts_with("X")) %>%
+  gather(code, response, abs_183:color_679) %>%
+  mutate(code2 = code) %>%
+  separate(code2, into = c("category","number")) %>%
+  select(-number)
+```
+
+There are `r nrow(milestone_labels)` milestones and `r length(unique(d$id))` children. 
+
+# Descriptives
+
+We begin with some descriptions of the dataset. The age distribution is very consistent, with some underrepresentation at the low end. 
+
+```{r}
+ages <- d %>%
+  group_by(id) %>%
+  summarise(age = age[1])
+
+qplot(age, data = ages, binwidth = 1)
+```
+
+The maternal education distribution is heavily skewed towards college and higher, so we can't learn much about socioeconomic effects here. Note that I have rebinned education into a small number of bins, such that "Carrera" and "Maestría/Doctorado" are grouped as "College and Above," and "Carrera técnica," "Comenzó universidad" and "Preparatoria" are grouped as "Secondary."
+
+```{r}
+ggplot(d, aes(x = momed)) + 
+  geom_histogram(stat = "count")
+```
+
+# Growth Curves
+
+We next turn to an analysis of individual children's total milestones achieved. This analysis yields classic growth curves including percentiles. It's clear from looking at these curves that 1) overall the survey is working well, but 2) there is some overreporting by parents of quite young infants. This second observations refers to the group of points well above the percentile curves. They seem like they are misinterpreting the task. 
+
+```{r}
+taus <-  c(0.1, 0.25, 0.5, 0.75, 0.9)
+
+by_kid <- d %>%
+  group_by(id, age, momed) %>%
+  summarise(responses = sum(response))
+```
+
+```{r}
+mod <- gcrq(formula = responses ~ ps(age, monotone = 1, lambda = 1000), 
+     tau = taus, data = by_kid)
+
+ages <- 1:24
+newdata <- data.frame(age = ages)
+
+preds <- predictQR_fixed(mod, newdata = newdata) %>%
+  data.frame %>%
+  mutate(age = ages) %>%
+  gather(percentile, pred, starts_with("X")) %>%
+  mutate(percentile = as.character(as.numeric(str_replace(percentile, "X", "")) * 100))
+```
+
+```{r}
+ggplot(by_kid, 
+       aes(x = age, y = responses)) + 
+  geom_jitter(height = 0, width = .2, alpha = .3) + 
+  geom_line(data = preds, aes(x = age, y = pred, col = percentile, group = percentile)) + 
+  ylim(0,323) + 
+  xlim(0,24) + 
+  ylab("Total milestones") + 
+  xlab("Age (months)") + 
+  scale_color_solarized() + 
+  theme(legend.position = "bottom")
+```
+
+Next, we break this down by maternal education. Note that we have almost no data on the "below secondary" category where we might expect more differences, so for clarity I've removed that group. 
+
+The percentile range appears more compressed for the secondary educated folks, but likely that's because of the amount of data we have. 
+
+```{r}
+momed_preds <- by_kid %>%
+  split(.$momed) %>%
+  map_df(function (x) {
+    mod <- gcrq(formula = responses ~ ps(age, monotone = 1, lambda = 1000), 
+                tau = taus, data = x)
+    newdata <- expand.grid(age = ages) 
+    preds <- predictQR_fixed(mod, newdata = data.frame(newdata)) %>%
+      data.frame %>%
+      mutate(age = ages) %>%
+      gather(percentile, pred, starts_with("X")) %>%
+      mutate(percentile = as.character(as.numeric(str_replace(percentile, 
+                                                              "X", "")) * 100), 
+             momed = x$momed[1])
+    })
+    
+ggplot(filter(by_kid, momed != "Below Secondary"), 
+       aes(x = age, y = responses)) + 
+  geom_jitter(height = 0, width = .2, alpha = .3) + 
+  geom_line(data = filter(momed_preds, momed != "Below Secondary"), 
+            aes(x = age, y = pred, 
+                col = percentile, group = percentile)) + 
+  facet_wrap(~momed) + 
+  ylim(0,323) + 
+  xlim(0,24) + 
+  ylab("Total milestones") + 
+  xlab("Age (months)") + 
+  scale_color_solarized(name = "Percentile") + 
+  theme(legend.position = "bottom")
+```
+
+We can also compare the medians for each group, to see if there are any differences in the central tendency for groups. This measure is more robust across sample sizes, and we're not actually seeing anything. 
+
+```{r}
+ggplot(filter(by_kid, momed != "Below Secondary"), 
+       aes(x = age, y = responses, col = momed)) + 
+  geom_jitter(height = 0, width = .2, alpha = .3) + 
+  geom_line(data = filter(momed_preds, percentile == 50, 
+                           momed != "Below Secondary"), 
+            aes(x = age, y = pred, col = momed)) + 
+  ylim(0,323) + 
+  xlim(0,24) + 
+  ylab("Total milestones") + 
+  xlab("Age (months)") + 
+  scale_color_solarized(name = "Maternal Education") + 
+  theme(legend.position = "bottom")
+```
+
+
+# Milestone Analysis
+
+In this section we focus on individual milestones and their growth pattern. 
+
+## Age of Acquisition
+
+We start by defining age of acquisition. Age of acquisition (AoA) is the first month in which a milestone is predicted to be observed in more than 50% of cases. We use robust regression for fitting acquisition curves. Here the red line shows the age of acquisition. In this case (milestone: `r unique(d$milestone)[4]`), it's 4 months. 
+
+```{r}
+age_range <- 1:24
+
+get_aoa <- function(x, grouper = "milestone") {
+  x_new <- select_(x[1,], grouper)
+  mod <- robustbase::glmrob(response ~ age, data = x, family = "binomial")
+  newdata <- data.frame(age = age_range)
+  preds <- predict(mod, newdata = newdata, type = "response")
+  above_threshold <- age_range[preds > .5]
+  
+  if (length(above_threshold) > 0 & length(above_threshold) < length(age_range)) {
+    return(bind_cols(x_new, data.frame(aoa = above_threshold[1])))
+  } else if (length(above_threshold) == 0) {
+    return(bind_cols(x_new, data.frame(aoa = NA)))
+  } else {
+    return(bind_cols(x_new, data.frame(aoa = min(age_range))))    
+  }
+}
+
+```
+
+```{r}
+this_milestone <- unique(d$milestone)[4]
+
+ms <- d %>%
+  filter(milestone == this_milestone) %>%
+  group_by(age, milestone) %>%
+  summarise(response = mean(response), 
+            n = n())
+
+mod <- robustbase::glmrob(response ~ age, 
+           family = "binomial", 
+           data = filter(d, milestone == this_milestone))
+
+preds <- data.frame(age = 1:24,
+                    pred = predict(mod, type = "response", 
+                                   newdata = data.frame(age = 1:24)))
+
+aoa <- get_aoa(d %>%
+  filter(milestone == this_milestone), grouper = "milestone")
+  
+ggplot(ms, aes(x = age, y = response)) + 
+  geom_jitter(data = filter(d, milestone == this_milestone),
+              aes(x = age, y = as.numeric(response)),
+              width = 0.5, height = .05, size = .5, alpha = .5) + 
+  scale_size_continuous(range = c(1, 4)) +
+  geom_point(aes(size = n), alpha = .5) +
+  geom_line(data = preds, aes(x = age, y = pred), col = "blue") + 
+  facet_wrap(~milestone) + 
+  ylim(0,1) +
+  geom_hline(yintercept = .5,lty = 2) + 
+  geom_vline(xintercept = aoa$aoa, lty = 2, col = "red")
+```
+
+Now let's see what the distribution of AoAs looks like across milestones. Looks like there are a good number of milestones that are reported by more than half of parents of one-month-olds. This may be an over-representation of true milestones for newborns (e.g., reflexes) or unclear milestone questions that everyone answers correctly. 
+
+```{r}
+milestone_aoas <- d %>%
+  split(.$milestone) %>%
+  map_df(function(x) get_aoa(x, grouper = "milestone"))
+
+ggplot(milestone_aoas, aes(x = aoa)) + 
+  geom_histogram(binwidth = 1) + 
+  xlab("Milestone AoA (months)")
+```
+
+Here's a table of milestones that have AoAs less than 1 month. It seems clear that some of these, e.g. "Presta atención a conversaciones," are just not capturing much.
+
+```{r}
+milestone_aoas %>%
+  left_join(cats) %>%
+  select(category, milestone, aoa) %>%
+  filter(aoa < 2) %>%
+  arrange(category) %>%
+  DT::datatable()
+```
+
+
+## AoA and Milestone Trajectories
+
+Now let's look at sample milestone trajectories. (Note that I'm going to have to truncate a lot of milestone names to get them to fit.)  Here are a few.
+
+```{r}
+ms <- d %>%
+  filter(milestone %in% unique(d$milestone)[1:15]) %>%
+  group_by(age, milestone_short) %>%
+  summarise(mean = mean(response), 
+            n = n())
+
+ggplot(ms, aes(x = age, y = mean)) + 
+  geom_point(aes(size = n), alpha = .5) +
+  scale_size_continuous(range = c(1, 4)) + 
+  geom_smooth(se=FALSE, aes(weight = 1/n)) + 
+  facet_wrap(~milestone_short) + 
+  ylim(0,1) 
+```
+
+Let's look at milestones' age slope. This tells us about how much they are changing. We can use this as one way to weed out "bad" milestones -- they have late AoAs but low age slopes. 
+
+Here are some milestones with especially low age slopes and take a look at what they are. On a first look, they appear to be mostly milestones that are about very early infancy. 
+
+```{r}
+models <- d %>%
+  group_by(milestone, milestone_short, category) %>%
+  do(tidy(glm(response ~ age, data = ., family = "binomial"))) %>%
+  filter(term == "age") %>%
+  ungroup()
+
+models$milestone_short <- fct_reorder(models$milestone_short, models$estimate)
+
+ggplot(filter(models, estimate < quantile(estimate, .1)),
+       aes(x = milestone_short, y = estimate)) +
+  geom_pointrange(aes(ymin = estimate - std.error, ymax = estimate + std.error,
+                      col = category)) + 
+  coord_flip()
+```
+
+Let's filter out the ones from early infancy (selecting those with higher AoA) and take a closer look. 
+
+```{r}
+models <- left_join(models, milestone_aoas)
+
+ggplot(filter(models, estimate < quantile(estimate, .2), aoa > 4),  
+       aes(x = milestone_short, y = estimate)) +
+  geom_pointrange(aes(ymin = estimate - std.error, ymax = estimate + std.error)) + 
+  coord_flip() 
+```
+
+The milestones that don't perform well on this criterion look like they are 1) ones where someone could reasonably disagree that a child does that or 2) ones where many child may never do the particular behavior ("Camina con las piernas muy separadas y avanza meciéndose de lado a lado (como pingüino)"), so the asymptote is low. These may be candidates for deletion.
+
+```{r}
+bad_milestones <- filter(models, estimate < quantile(estimate, .15), aoa > 4)$milestone
+
+ms <- d %>%
+  filter(milestone %in% bad_milestones) %>%
+  group_by(age, category, milestone, milestone_short) %>%
+  summarise(mean = mean(response), 
+            n = n())
+
+ggplot(ms, aes(x = age, y = mean)) + 
+  geom_point(aes(size = n), alpha = .5) +
+  scale_size_continuous(range = c(1, 4)) + 
+  geom_smooth(se=FALSE, aes(weight = 1/n)) + 
+  facet_wrap(~milestone_short) + 
+  ylim(0,1) 
+
+ms %>%
+  ungroup() %>%
+  select(milestone, category) %>%
+  distinct() %>%
+  DT::datatable()
+```
+
+## Milestones By Category
+
+Next, let's look at the coherence of the milestone categories. 
+
+```{r}
+mss <- d %>%
+  group_by(age, category, milestone) %>%
+  summarise(response = mean(response))
+
+ms <- d %>%
+  group_by(age, category) %>%
+  summarise(response = mean(response), 
+            n = n())
+
+aoas <- d %>%
+  split(.$category) %>%
+  map_df(function(x) get_aoa(x, grouper = "category"))
+  
+
+ms <- left_join(ms, aoas)
+mss <- left_join(mss, aoas)
+
+ms$category <- fct_reorder(factor(ms$category), ms$aoa)
+mss$category <- fct_reorder(factor(mss$category), mss$aoa)
+
+ggplot(ms, aes(x = age, y = response)) + 
+  # geom_point(aes(size = n), alpha = .5) +
+  geom_line(data = mss, aes(x = age, y = response, group=milestone), 
+              alpha = .5, col = "black") + 
+  facet_wrap(~category) + 
+  geom_smooth(se=FALSE, aes(weight = 1/n)) + 
+  ylim(0,1) 
+```
+
+```{r, eval=FALSE}
+ms <- d %>%
+  filter(category == "Primeras palabras") %>%
+  group_by(age, milestone) %>%
+  summarise(response = mean(response), 
+            n = n())
+
+aoas <- d %>%
+  filter(category == "Primeras palabras") %>%
+  split(.$milestone) %>%
+  map_df(function(x) get_aoa(x, grouper = "milestone"))
+  
+ms <- left_join(ms, aoas) %>%
+  mutate(group = ceiling(1:n()/5))
+
+ms$milestone <- fct_reorder(factor(ms$milestone), ms$aoa)
+
+ggplot(ms, aes(x = age, y = response, col = milestone)) + 
+  geom_smooth(se=FALSE, aes(weight = 1/n)) + 
+  geom_point(alpha = .5) + 
+  ylim(0,1) +
+  facet_wrap(~group) + 
+  scale_color_discrete(guide = FALSE) +
+  geom_text_repel(data = filter(ms, age == 12), aes(label = milestone))
+```
+
+## Categories split by SES
+
+Let's take a quick look at which categories are learned earlier or later depending on socio-economic status (maternal education). It's hard to see many differences here, although there are some suggestive differences with the lowest group (probably spurious due to small sample). 
+
+```{r}
+ms <- d %>%
+  group_by(age, category, momed) %>%
+  summarise(response = mean(response), 
+            n = n())
+
+aoas <- d %>%
+  split(.$category) %>%
+  map_df(function(x) get_aoa(x, grouper = "category"))
+  
+ms <- left_join(ms, aoas)
+
+preds <- d %>%
+  split(list(.$category, .$momed)) %>%
+  map_df(function(x) {
+    mod <- robustbase::glmrob(response ~ age, data = x, family = "binomial")
+    preds <- predict(mod, type = "response", newdata = data.frame(age = 0:24))
+    return(data.frame(age = 0:24, 
+                      category = x$category[1],
+                      momed = x$momed[1],
+                      pred = preds))
+  })
+
+ms <- left_join(ms, preds) %>%
+  ungroup %>%
+  mutate(category = fct_reorder(factor(category), aoa),
+         momed = fct_relevel(momed, c("Below Secondary", "Secondary")))
+
+ggplot(ms, aes(x = age, y = response, col = momed)) + 
+  geom_point(aes(size = n), alpha = .5) + 
+  geom_line(aes(x = age, y = pred)) + 
+  facet_wrap(~category) + 
+  scale_color_solarized(name = "Maternal Education") + 
+  scale_size_continuous(range = c(.5, 3), name = "N") + 
+  theme(legend.position = "bottom") + 
+  ylim(0,1) + xlim(c(0,24)) +
+  ylab("Age") + xlab("Proportion Reporting Milestone")
+```
+
+
+```{r, eval = FALSE}
+diffs <- ms %>%
+  group_by(category) %>%
+  summarise(aoa = aoa[1], 
+            ses_diff = sum(pred[momed == "College or Above"] - 
+                             pred[momed == "Below Secondary"])) %>%
+  mutate(category = fct_reorder(category, ses_diff))
+
+ggplot(diffs, aes(x = category, y = ses_diff)) + 
+  geom_point() + 
+  xlab("Milestone Category") + 
+  ylab("Relative Advantage to High Maternal Education") + 
+  geom_hline(yintercept = 0, lty = 2) + 
+  coord_flip()
+  
+ggplot(diffs, aes(x = aoa, y = ses_diff)) + 
+  geom_smooth(span = 1) + 
+  geom_point() + 
+  geom_hline(yintercept = 0, lty = 2) + 
+  geom_text_repel(aes(label = category), force = 5, 
+                  segment.alpha = .25, label.padding = unit(2, "lines")) + 
+  ylab("Relative Advantage to High Maternal Education") +
+  xlab("Age of Acquisition")
+```
+
+```{r, eval = FALSE}
+diffs <- ms %>%
+  group_by(category) %>%
+  summarise(aoa = aoa[1], 
+            ses_diff = sum(pred[momed == "College or Above"] - 
+                             pred[momed == "Secondary"])) %>%
+  mutate(category = fct_reorder(category, ses_diff))
+
+ggplot(diffs, aes(x = category, y = ses_diff)) + 
+  geom_point() + 
+  xlab("Milestone Category") + 
+  ylab("Relative Advantage to High Maternal Education") + 
+  geom_hline(yintercept = 0, lty = 2) + 
+  coord_flip()
+  
+```
+
+
+```{r, eval = FALSE}
+ggplot(diffs, aes(x = aoa, y = ses_diff)) + 
+  geom_smooth(span = 1) + 
+  geom_point() + 
+  geom_hline(yintercept = 0, lty = 2) + 
+  geom_text_repel(aes(label = category), force = 5, 
+                  segment.alpha = .25, label.padding = unit(2, "lines")) + 
+  ylab("Relative Advantage to High Maternal Education") +
+  xlab("Age of Acquisition")
+```
+
+# Correlation grouping of milestones
+
+In our next analysis, we group milestones that are correlated with one another. We do this using the partial Spearman's correlation (correcting for age). We expect milestones to be grouped within category but between-category grouping could be interesting.
+
+Note that this analysis is a bit computationally intensive, so we cache the results offline. 
+
+```{r, eval = FALSE}
+d_wide <- d %>%
+  select(id, age, milestone, response) %>%
+  spread(milestone, response)
+
+cor.mat <- matrix(nrow = n, ncol = n)
+
+for (i in 1:n) {
+  print(i)
+  for (j in 1:n) {
+     try(cor.mat[i,j] <- ppcor::pcor.test(d_wide[,milestones[i]],
+                                      d_wide[,milestones[j]], 
+                                      d_wide$age, method="spearman")$estimate)
+  }
+}
+
+feather::write_feather(as_tibble(cor.mat), "cor.mat.feather")
+```
+
+The full correlation matrix is pretty but not that informative, so it's not shown here. 
+
+```{r}
+cors <- feather::read_feather("cor.mat.feather") 
+names(cors) <- milestones
+cors <- cors %>% 
+  mutate(V1 = milestones) %>%
+  gather(V2, pcor, 1:323) %>%
+  mutate(V1_short = str_sub(V1, 1, 20), 
+         V2_short = str_sub(V2, 1, 20))
+
+# join in categories
+# reorder by category
+# NA out diagonal.
+cors <- left_join(cors, rename(cats, 
+                               V1 = milestone, 
+                               V1_cat = category)) %>%
+  left_join(rename(cats,
+                   V2 = milestone, 
+                   V2_cat = category)) %>%
+  mutate(V1_short = fct_reorder(V1_short, as.numeric(as.factor(V1_cat))), 
+         V2_short = fct_reorder(V2_short, as.numeric(as.factor(V2_cat))), 
+         pcor = ifelse(V1 == V2, NA, pcor), 
+         same_cat = V2_cat==V1_cat) 
+```
+
+```{r, eval=FALSE}
+ggplot(cors,
+       aes(x = V1_short, y = V2_short, fill = pcor)) + 
+  geom_tile()
+```
+
+As expected, average milestone-to-milestone correlation is higher for milestones in the same category (red). But it's not always overwhelming. 
+
+```{r}
+ggplot(cors, aes(x = pcor, fill = same_cat)) + 
+  geom_histogram() +
+  facet_wrap(~ same_cat, scales = "free_y") + 
+  scale_fill_solarized()
+```
+
+Here are a few of the correlations that are high between category. This isn't a great representation of this pattern, unfortunately. 
+
+```{r}
+high_between <- cors %>%
+  filter(same_cat == FALSE) %>%
+  filter(pcor > quantile(pcor, .999))
+
+ggplot(high_between, aes(x = V1_short, y = V2_short, fill = pcor)) + 
+  geom_tile() + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = .5)) + 
+  scale_fill_continuous(limits = c(0,.75))
+```
+
+A table is easier to read. Many of these are motor milestones, but there are a few neat correlations (e.g., sitting and object manipulation). 
+
+```{r}
+high_between %>%
+  select(-V1_short, -V2_short, -same_cat) %>%
+  arrange(V1_cat, V2_cat) %>%
+  mutate(pcor = signif(pcor, digits = 2)) %>%
+  DT::datatable()
+```
+
+# Psychometric analysis
+
+In this section we examine the psychometric reliability of categories and items, namely, 1) how well the categories hang together as constructs, and 2) how well the items are reflective of the categories. 
+
+The assumptions are that categories that are not reflective of a single construct may need to be revised, and items that are not reflective of the category may be problematic. 
+
+Both of these assumptions are subject to potential revision. First, it might be that a category (e.g. "socialization") might simply not reflect a construct with a single developmental timecourse and might instead put together a variety of different related constructs. Second, given this notion of category, a particular item that isn't informative about the category may simply be different (but still informative about something else). 
+
+Nevertheless, in terms of test design, these models may be the best we can do, so if items are not performing well, we should probably look into them more deeply. 
+
+First look at scale reliabilities for each category.
+
+```{r}
+alphas <- d %>%
+  ungroup %>%
+  select(id, milestone, category, response) %>%
+  split(.$category) %>%
+  map_df(function(x) {
+    wide <- x %>%
+      mutate(response = as.numeric(response)) %>%
+      spread(milestone, response) %>%
+      select(-id, -category) %>%
+      data.frame 
+    
+    a <- psych::alpha(wide)
+    
+    return(data_frame(category = x$category[1], 
+                      alpha = a$total$std.alpha))
+  })
+      
+alphas$category <- fct_reorder(alphas$category, alphas$alpha)
+ggplot(alphas, aes(x = category, y = alpha)) + 
+  geom_point() + 
+  coord_flip()
+```
+
+Examine top (Walking, standing) and bottom categories (development of feelings, socialization).
+
+```{r}
+top_bottom_cats <- levels(alphas$category)[c(alphas$category[alphas$alpha < .7], 
+                     alphas$category[alphas$alpha > .95])]
+mss <- d %>%
+  filter(category %in% top_bottom_cats) %>%
+  group_by(age, category, milestone) %>%
+  summarise(response = mean(response), 
+            n = n())
+
+ms <- mss %>%
+  group_by(age, category) %>%
+  summarise(response = mean(response))
+
+ggplot(mss, aes(x = age, y = response)) + 
+  geom_line(alpha = .5, aes(group = milestone)) + 
+  geom_smooth(se=FALSE, aes(x = age, y = response), data = ms) + 
+  ylim(0,1) +
+  facet_wrap(~category) + 
+  scale_color_discrete(guide = FALSE) 
+```
+
+Examine items in the "Socialización" category. This category mixes things like "laughs," "pays attention to faces," and "looks at the person who is talking" (which are relatively early) with much later ones like "identifies the feelings of people in images."
+
+```{r}
+filter(cats, category == "Socialización") %>%
+  DT::datatable()
+```
+
+Some of these may be useful milestones, but socialization as a category doesn't really work for putting them together. 
+
+## Different categorizations
+
+Examine different categorizations sent by Eugenia on 4/19. 
+
+```{r}
+alphas2 <- d %>%
+  ungroup %>%
+  select(id, milestone, category2, response) %>%
+  split(.$category2) %>%
+  map_df(function(x) {
+    wide <- x %>%
+      mutate(response = as.numeric(response)) %>%
+      spread(milestone, response) %>%
+      select(-id, -category2) %>%
+      data.frame 
+    
+    a <- psych::alpha(wide)
+    
+    return(data_frame(category2 = x$category2[1], 
+                      alpha = a$total$std.alpha))
+  })
+
+n1 <- d %>% group_by(category3) %>% summarise(n = length(unique(milestone))) %>% filter(n>1) 
+
+alphas3 <- d %>%
+  ungroup %>%
+  select(id, milestone, category3, response) %>%
+  filter(category3 %in% n1$category3) %>%
+  split(.$category3) %>%
+  map_df(function(x) {
+    print(x$category3[1])
+    
+    wide <- x %>%
+      mutate(response = as.numeric(response)) %>%
+      spread(milestone, response) %>%
+      select(-id, -category3) %>%
+      data.frame 
+    
+    a <- psych::alpha(wide)
+    
+    return(data_frame(category3 = x$category3[1], 
+                      alpha = a$total$std.alpha))
+  })
+
+n1 <- d %>% group_by(category4) %>% summarise(n = length(unique(milestone))) %>% filter(n>1) 
+
+
+alphas4 <- d %>%
+  ungroup %>%
+  select(id, milestone, category4, response) %>%
+  filter(category4 %in% n1$category4) %>%
+  split(.$category4) %>%
+  map_df(function(x) {
+    wide <- x %>%
+      mutate(response = as.numeric(response)) %>%
+      spread(milestone, response) %>%
+      select(-id, -category4) %>%
+      data.frame 
+    
+    a <- psych::alpha(wide)
+    
+    return(data_frame(category4 = x$category4[1], 
+                      alpha = a$total$std.alpha))
+  })
+```      
+
+```{r}
+all_alphas <- bind_rows(alphas %>% mutate(categories = 1), 
+                        alphas2 %>%
+                          rename(category = category2) %>%
+                          mutate(categories = 2),
+                        alphas3 %>%
+                          rename(category = category3) %>%
+                          mutate(categories = 3),
+                        alphas4 %>%
+                          rename(category = category4) %>%
+                          mutate(categories = 4))
+
+all_alphas$category <- fct_reorder(all_alphas$category, all_alphas$alpha)
+ggplot(all_alphas, aes(x = category, y = alpha, col = factor(categories))) + 
+  geom_jitter(width = 0.2, height = 0) + 
+  coord_flip()
+```
+
+# Milestone means
+
+```{r}
+age_ms <- d %>%
+  group_by(age, category) %>%
+  summarise(cat_mean = mean(response))
+
+ind_ms <- d %>%
+  group_by(id, age, category) %>%
+  summarise(response = mean(response)) %>%
+  left_join(age_ms) %>%
+  mutate(response_corrected = response - cat_mean)
+
+cat_cors <- ind_ms %>%
+  select(-age, -response, -cat_mean) %>%
+  spread(category, response_corrected)
+
+cat_cor_mat <- cor(cat_cors[,3:29])
+
+image(cat_cor_mat)
+```
+
+
+```{r}
+pca <- princomp(cat_cor_mat)
+```
+
+

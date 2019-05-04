@@ -36,13 +36,20 @@ source("predictQR_fixed.R")
 Read data. 
 
 ```{r}
-d_raw <- readxl::read_xlsx("data/norming2/Kinedu Norming Survey Raw Data - May 15 2018.xlsx")
+fix_names <- function(x) ifelse(x == "", paste0("X__", 1:length(x) - 1), x)
+
+d_raw <- 
+  readxl::read_xlsx(
+    "data/norming2/Kinedu Norming Survey Raw Data - May 15 2018.xlsx", 
+    .name_repair = fix_names
+  )
 ```
 
 Get milestone labels. 
 
 ```{r}
-milestones <- d_raw %>%
+milestones <- 
+  d_raw %>%
   select(abs_183:color_679) %>%
   slice(3) %>%
   gather(code, name) %>%
@@ -60,7 +67,7 @@ Wrangle data.
 
 ```{r}
 d <- d_raw %>%
-  mutate(age = as.numeric(X__8), 
+  mutate(age = as.numeric(X__422), 
          gestation = as.numeric(X__3),
          kinder = as.numeric(X__4),
          diagnosis = as.numeric(X__1), 
@@ -91,10 +98,6 @@ by_age <- d %>%
 ggplot(by_age, aes(x = age)) + 
   geom_histogram(stat = "count")
 ```
-
-```{r}
-å```
-
 
 # Growth Curves
 
@@ -134,7 +137,6 @@ ggplot(by_age,
 It seems pretty obvious that there are some children here who hsve parents that are really radically under/over reporting (mostly over-reporting). 
 
 Let's remove these more or less by hand. We'll just remove all the `age = 0` kids for now. 
-
 
 ```{r}
 excl <- by_age %>%
@@ -176,7 +178,6 @@ Looks generally great, with the exception of a few outliers. We could trim these
 # Milestone Analysis
 
 In this section we focus on individual milestones and their growth pattern. 
-
 
 Now let's look at sample milestone trajectories. (Note that I'm going to have to truncate a lot of milestone names to get them to fit.)  Here are a few.
 
@@ -223,7 +224,6 @@ ggplot(ms, aes(x = age, y = response)) +
 
 Overall they look very coherent and consistent. These are both major improvements from the previous version. 
 
-
 # Psychometric analysis
 
 ## Single factor model
@@ -246,15 +246,36 @@ rownames(d_mat) <- d_wide$id
 # Requires no empty rows - `personfit` doesn't work with `removeEmptyRows=TRUE` even though the model fit will work that way. 
 d_mat <- d_mat[complete.cases(d_mat),]
 
-mod_4pl <- mirt(d_mat, 1, itemtype='4PL', verbose=TRUE)
+mod_2pl <- mirt(d_mat, 1, itemtype='2PL', verbose=TRUE, TOL = 0.0001)
+
+mod_3pl <- mirt(d_mat, 1, itemtype='3PL', verbose=TRUE, TOL = 0.0001)
+
+mod_4pl <- mirt(d_mat, 1, itemtype='4PL', verbose=TRUE, TOL = 0.00000001)
+
+anova(mod_2pl, mod_3pl)
+anova(mod_4pl, mod_3pl)
+
+mod_4pl@Fit$logLik
 
 coefs_4pl <- as_data_frame(coef(mod_4pl, simplify = TRUE)$items) %>%
   mutate(code = rownames(coef(mod_4pl, simplify = TRUE)$items))
+
+fscores_3pl <- data_frame(id = rownames(d_mat), 
+                             ability = fscores(mod_3pl, method = "MAP")[,1])
+
+fscores_3pl <- data_frame(id = rownames(d_mat), 
+                             ability = fscores(mod_3pl, method = "EAP")[,1])
+
 fscores_4pl <- data_frame(id = rownames(d_mat), 
                              ability = fscores(mod_4pl, method = "MAP")[,1])
 
 save(file = "cached_data/norming2_mod_4pl.Rds", "mod_4pl","fscores_4pl", "coefs_4pl")
 ```
+
+```{r}
+plot(fscores_3pl$ability, fscores_4pl$ability)
+```
+
 
 Now examine the person-level fits. 
 
@@ -307,6 +328,8 @@ ggplot(coefs_4pl,
 
 ```{r}
 mod_2f <- mirt(d_mat, 2, itemtype='4PL', verbose=TRUE)
+
+mod_2f3 <- mirt(d_mat, 2, itemtype='3PL', verbose=TRUE)
 
 coefs_2f <- as_data_frame(coef(mod_2f, simplify = TRUE)$items) %>%
   mutate(code = rownames(coef(mod_2f, simplify = TRUE)$items))

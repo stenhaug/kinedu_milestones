@@ -66,6 +66,18 @@ Fit models
 ```{r}
 mod_3pl <- mirt(d_mat, 1, itemtype='3PL', verbose=FALSE, TOL = 0.0001)
 mod_4pl <- mirt(d_mat, 1, itemtype='4PL', verbose=FALSE, TOL = 0.00000001)
+
+mod_4pl_mc <- mirt(d_mat, 1, itemtype='4PL', verbose=FALSE, TOL = 0.00000001, method = "MCEM")
+
+mod_4pl_mh <- mirt(d_mat, 1, itemtype='4PL', verbose=FALSE, TOL = 0.00000001, method = "MHRM")
+
+coef(mod_4pl_mc)$color_666
+
+coef(mod_4pl_mh)$color_666
+
+coef(mod_4pl_mc, simplify = TRUE)$items$a1
+
+plot(coef(mod_4pl, simplify = TRUE)$items[ , "a1"], coef(mod_4pl_mc, simplify = TRUE)$items[ , "a1"])
 ```
 
 Bizarre that the more flexible 4pl has a less probable likelihood
@@ -111,6 +123,30 @@ coef_4pl <-
     as.data.frame() %>% 
     mutate(item = row.names(.)) %>% 
     as_tibble()
+
+tibble(
+  disc_3pl = coef_3pl$a1,
+  disc_4pl = coef_4pl$a1,
+  item = coef_3pl$item
+) %>% 
+  ggplot(aes(x = disc_3pl, y = disc_4pl)) +
+  geom_point() +
+  labs(title = "Comparing discrimination parameters from 3PL vs 4PL")
+
+bind_rows(
+  coef_3pl %>% mutate(model = "3PL"),
+  coef_4pl %>% mutate(model = "4PL")
+) %>% 
+  ggplot(aes(x = a1, fill = model)) +
+  geom_histogram() +
+  facet_wrap(~ model, ncol = 1)
+
+tibble(
+  disc_3pl = coef_3pl$a1,
+  disc_4pl = coef_4pl$a1,
+  item = coef_3pl$item
+) %>% 
+  arrange(disc_4pl)
 ```
 
 Find items with low upper bounds. These will be the items the 3PL and 4PL disagree most on.
@@ -190,7 +226,7 @@ crossing(
                 ~ probtrace(
                     extract.item(
                         get(.x), 
-                        which(coef_3pl$item == item)
+                        which(coef_3pl$item == item) # 3pl and 4pl have same order
                     ), 
                     .y
                 )[2]
@@ -203,7 +239,8 @@ crossing(
         data = buckets_3pl,
         aes(
             x = theta_3pl_bucket,
-            y = p_correct
+            y = p_correct,
+            size = n
         ),
         color = "darkred"
     ) +
@@ -212,7 +249,8 @@ crossing(
         data = buckets_4pl,
         aes(
             x = theta_4pl_bucket,
-            y = p_correct
+            y = p_correct,
+            size = n 
         ),
         color = "cyan"
     ) +

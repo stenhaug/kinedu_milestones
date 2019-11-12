@@ -1,0 +1,284 @@
+---
+title: "16_heatmap"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mirt)
+mirts2 <- read_rds("15_mirts2.rds")
+
+get_kids <- function(fscores){
+    fscores %>%
+        as_tibble() %>%
+        mutate(id = rownames(d_mat)) %>%
+        left_join(d %>% group_by(id) %>% summarize(age = age[1])) %>%
+        select(id, age, everything())
+}
+```
+
+# Prepare data
+
+```{r}
+# read in
+fix_names <- function(x) ifelse(x == "", paste0("X__", 1:length(x) - 1), x)
+
+d_raw <- 
+  readxl::read_xlsx(
+    "data/norming2/Kinedu Norming Survey Raw Data - May 15 2018.xlsx", 
+    .name_repair = fix_names
+  )
+
+# prepare irt matrix
+d <- 
+  d_raw %>%
+  mutate(age = as.numeric(X__422), 
+         gestation = as.numeric(X__3),
+         kinder = as.numeric(X__4),
+         diagnosis = as.numeric(X__1), 
+         id = `Nombre variable`) %>%
+  slice(4:n()) %>% # drop two top label rows. 
+  select(-starts_with("X"), -`Nombre variable`) %>%
+  gather(code, response, abs_183:color_679) %>%
+  mutate(code = str_replace(code, "^d_","d"),
+         code = str_replace_all(code, " ", ""),
+         code = str_replace(code, "^e_",""),
+         code2 = code) %>%
+  separate(code2, into = c("category","number")) %>%
+  select(-number) %>%
+  mutate(response = as.numeric(response)) %>% 
+  filter(age != 0) # DROP AGE 0
+
+d_wide <- d %>%
+  select(id, code, response) %>%
+  spread(code, response)
+  
+d_mat <- d_wide %>%
+  select(-id) %>% 
+  data.frame %>%
+  data.matrix
+
+colnames(d_mat) <- sort(unique(d$code))
+rownames(d_mat) <- d_wide$id
+
+# lots of items / students is relatively high
+dim(d_mat)
+
+# we want area for each item
+areas <- 
+  readxl::read_excel("data/norming2/0-48 milestones y abreviaciones (viejos vs nuevos).xlsx") %>% 
+  select(
+    abbrev = Abbreviation,
+    milestone = `Milestone ID...9`,
+    area = Area
+  ) %>% 
+  mutate(abbrev = str_replace(abbrev, "^e_", "")) %>% 
+  mutate(abbrev = str_replace(abbrev, "_", "")) %>% 
+  mutate(paste = paste0(abbrev, "_", milestone))
+
+all(colnames(d_mat) %in% areas$paste)
+
+item_area <- 
+  areas$area[match(colnames(d_mat), areas$paste)]
+
+d_mat %>% write_rds("data-clean/d_mat.rds")
+areas %>% write_rds("data-clean/areas.rds")
+```
+
+# items
+
+```{r}
+summary(mirts2$model_full[[2]])
+
+coef(mirts2$model_full[[2]], simplify = TRUE)$items
+
+
+areas %>% count(area)
+
+data <- 
+    coef(mirts2$model_full[[2]], simplify = TRUE)$items %>% 
+    as.data.frame() %>% 
+    mutate(item = row.names(.)) %>% 
+    as_tibble() %>% 
+    select(item, everything()) %>% 
+    left_join(areas, by = c("item" = "paste"))
+
+data %>% select(a1:a3) %>% map(median)
+
+data %>% 
+    select(area, a1:a3) %>% 
+    mutate(a1 = -a1, a2 = -a2) %>% 
+    gather(var, val, -area) %>% 
+    ggplot(aes(x = val, fill = area)) +
+    ggridges::geom_density_line(alpha = 0.5) +
+    facet_wrap(~ var, ncol = 1) +
+    labs(
+        x = "factor loading",
+        y = "How do different areas load onto each factor?"
+    )
+```
+
+mike suggests look at heatmap with abbrev
+
+```{r}
+f_sort_by <- function(sort_by){
+  data %>% 
+    select(abbrev, a1:a3) %>% 
+    mutate(a1 = -a1, a2 = -a2, abbrev = fct_reorder(abbrev, {{sort_by}})) %>% 
+    gather(var, val, -abbrev) %>% 
+    group_by(abbrev, var) %>% 
+    summarize(mean = mean(val)) %>% 
+    ungroup() %>% 
+    ggplot(aes(x = abbrev, y = var, fill = mean)) +
+    geom_tile() +
+    coord_flip() +
+    scale_fill_viridis_c() +
+    labs(
+      y = "factor discrimination",
+      title = "heatmap",
+      subtitle = str_c("y-axis is sorted by ", quo_name(enquo(sort_by)))
+    )
+}
+
+f_sort_by(a1)
+
+f_sort_by(a2)
+
+f_sort_by(a3)
+```
+
+```{r}
+
+
+data %>% 
+    select(area, abbrev, a1:a3) %>% 
+    mutate(a1 = -a1, a2 = -a2, abbrev = fct_reorder(abbrev, a1)) %>% 
+    gather(var, val, -abbrev, -area) %>% 
+    group_by(area, abbrev, var) %>% 
+    summarize(mean = mean(val)) %>% 
+    ungroup() %>% 
+    ggplot(aes(x = abbrev, y = var, fill = mean)) +
+    geom_tile() +
+    coord_flip() +
+    scale_fill_viridis_c() +
+    facet_wrap(~ area, nrow = 1)
+```
+
+let's make some ordering thing
+
+```{r}
+min_rank(c(1, 3, 2), )
+
+?min_rank
+
+data %>% 
+    select(abbrev, a1:a3) %>% 
+    mutate(a1 = -a1, a2 = -a2) %>% 
+    mutate(abbrev = fct_reorder(abbrev, a1, .fun = mean)) %>% 
+    gather(var, val, -abbrev) %>% 
+    group_by(abbrev, var) %>% 
+    summarize(mean = mean(val)) %>% 
+    ungroup() %>% 
+    group_by(var) %>% 
+    mutate(rank = min_rank(desc(mean))) %>% 
+  arrange(desc(rank)) %>% 
+  ungroup() %>% 
+  ggplot(aes(x = abbrev, y = rank )) +
+  geom_point(aes(x = abbrev, y = rank, color = var)) +
+  coord_flip() +
+  labs(
+    color = "factor loading",
+    title = "lower ranks corresponds to loading more on that factor",
+    subtitle = "e.g. conver has highest loading for factor 1"
+  )
+```
+
+
+
+kills your analysis if you're doing mle:
+
+1. you fit using x and y and 4 factors
+
+2. select how many factors you need by looking at output
+
+3. re-fit with just that number of factors
+
+
+[the motivation here is to preserve the fit 3 factors. you have residuals - under the null hypothesis where there are only 3 factors - if estimate these then the residuals in x orthogonolized (orthogonolized because we've already extracted those 3 factors) should be independent of y residuals. now permute y residuals  and calculate for each permutation add the permuted y residual back to the originally estimated y. now fit a four factor model on this x, y_new (this can create a distribution by permuting y residuals many times)
+
+if we just have a 3 factor model, can we take it and then estimate three factors and do a random rotation of the residuals and then fit a four factor model 
+
+mike wants something like a scree plot
+
+```{r}
+summary(mirts2$model_full[[1]], rotate = "none")
+
+get_prop_var <- function(object){
+  F <- object@Fit$F
+  SS <- apply(F^2, 2, sum)
+  SS / nrow(F)
+}
+
+mirts2$model_full[[1]] %>% 
+  get_prop_var() %>% 
+  enframe() %>% 
+  ggplot(aes(x = name, y = value)) +
+  geom_col() +
+  labs(
+    x = "factor",
+    y = "Proportion Var",
+    title = "4 factor model"
+  )
+
+mirts2$model_full[[2]] %>% 
+  get_prop_var() %>% 
+  enframe() %>% 
+  ggplot(aes(x = name, y = value)) +
+  geom_col() +
+  labs(
+    x = "factor",
+    y = "Proportion Var",
+    title = "3 factor model"
+  )
+
+mirts2$model_full[[3]] %>% 
+  get_prop_var() %>% 
+  enframe() %>% 
+  ggplot(aes(x = name, y = value)) +
+  geom_col() +
+  labs(
+    x = "factor",
+    y = "Proportion Var",
+    title = "2 factor model"
+  )
+```
+
+
+# kids
+
+```{r}
+mirts2
+
+kids_data <- 
+    get_kids(mirts2$fscores[[2]]) %>% 
+    mutate(F1 = -F1, F2 = -F2) %>% 
+    select(-id) %>% 
+    gather(var, val, -age) 
+
+kids_data %>% 
+    ggplot(aes(x = val, fill = var)) +
+    ggridges::geom_density_line(alpha = 0.5) +
+    labs(x = "factor score", fill = "factor", title = "distribution of factor scores")
+
+kids_data %>% 
+    ggplot(aes(x = age, y = val)) +
+    geom_point(alpha = 0.05) +
+    facet_wrap(~ var, ncol = 1) +
+    geom_smooth(se = FALSE) +
+    labs(title = "Relationship between age and factors",
+         y = "factor score")
+
+
+```
+

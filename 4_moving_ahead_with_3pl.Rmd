@@ -22,6 +22,8 @@ d_raw <-
     .name_repair = fix_names
   )
 
+d_raw %>% View()
+
 # prepare irt matrix
 d <- 
   d_raw %>%
@@ -93,7 +95,7 @@ items_3pl_1 <- get_item_pars(mod_3pl_1)
 graph_item_pars(items_3pl_1)
 
 # look at problematic items
-items_3pl_1 %>% filter(a1 < 0.25 | a1 > 5) %>% arrange(desc(abs(a1)))
+items_3pl_1 %>% filter(a1 < 0.25 | a1 > 5) %>% arrange(desc(abs(a1))) %>% View()
 
 d_mat[ , c("conver_617", "babbling _589", "conver_656")] %>% 
     colMeans()
@@ -102,6 +104,16 @@ d_mat[ , c("conver_617", "babbling _589", "conver_656")] %>%
     as_tibble() %>% 
     group_by_all() %>% 
     summarize(n = n())
+
+?mirt
+
+mod_3pl_1
+
+items_3pl_1 %>% mutate(r = row_number()) %>% filter(item == "conver_617")
+
+itemplot(mod_3pl_1, 1)
+
+plot(mod_3pl_1)
 ```
 
 ## 1 factor w/ prior
@@ -151,6 +163,8 @@ save.image("4_models.Rdata")
 
 ```{r}
 mod_3pl_1 %>% get_item_pars() %>% graph_item_pars()
+
+mod_3pl_1 %>% get_item_pars() %>% View()
 
 mod_3pl_1_shrunk %>% get_item_pars() %>% graph_item_pars()
 

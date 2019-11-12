@@ -1,0 +1,79 @@
+---
+title: "8_scratch_exploring_1PL"
+output: html_document
+---
+
+Didn't really get anything useful here....
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mirt)
+theme_set(theme_classic(base_size = 14))
+options(pillar.sigfig = 6)
+
+R.utils::sourceDirectory("~/Google_Drive/5_Projects/irt_comparison3/R")
+source("6_functions.R")
+
+
+d <- read_rds("data-clean/d.rds")
+
+d_wide <- d %>% spread(code, response)
+
+areas <- read_rds("data-clean/areas.rds")
+d_mat <- read_rds("data-clean/d_mat.rds")
+item_area <- areas$area[match(colnames(d_mat), areas$paste)]
+```
+
+# Run
+
+mirts
+
+```{r}
+mirts <- 
+  tribble(
+    ~factors,  ~itemtype,
+        "1",      "Rasch"
+  ) %>% 
+    mutate(
+        model_full =
+            map2(
+                map(factors, fix_factors),
+                itemtype,
+                ~ mirt(
+                    d_mat,
+                    .x, 
+                    .y,
+                    # quadpts = 6, (best to use built in formula — perhaps?)
+                    technical = list(NCYCLES = 1000) # crank
+                )
+            ),
+        log_lik = map_dbl(model_full, logLik),
+        n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
+        fscores = map(model_full, fscores)
+    )
+```
+
+analyze
+
+```{r}
+demo <- 
+  d %>%
+  group_by(id) %>%
+  summarise(
+    age = age[1], 
+    score = sum(response)
+  ) %>% 
+  mutate(
+    ability = mirts$fscores[[1]][ , 1]
+  )
+
+demo %>% 
+  ggplot(aes(x = ability, y = score, color = age > median(demo$age))) +
+  geom_point(alpha = 0.1)
+```
+
+
+$$
+\text{lpl }\tilde{y}_{I^{\prime}J} = \left[\prod_{i=1}^{I}  \int \prod_{j=1}^{J} \text{Pr}(\tilde{y}_{ij} | \theta, \hat{\gamma_j}) g(\theta) d \theta \right]^{\frac1{I x J}}
+$$

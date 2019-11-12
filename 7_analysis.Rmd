@@ -1,0 +1,137 @@
+---
+title: "7_analysis"
+output: html_document
+---
+
+```{r, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mirt)
+library(GGally)
+theme_set(theme_classic(base_size = 14))
+options(pillar.sigfig = 6)
+source("7_functions.R")
+```
+
+# Load 
+
+```{r}
+d <- read_rds("data-clean/d.rds")
+
+d_mat <- read_rds("data-clean/d_mat.rds")
+
+milestones <-
+    readxl::read_excel("data/norming2/0-48 milestones y abreviaciones (viejos vs nuevos).xlsx") %>%
+    select(id = 1, area = 5, abbrev = 10, month = 6, eng = 4)
+
+all_models <- 
+    bind_rows(
+        read_rds("6_mirts_2.rds"),
+        read_rds("6_bifactors_2.rds")
+    ) %>% 
+    rename(in_sample = ll_person_item) %>% 
+    mutate(
+        out_of_sample = exp(log_lik / nrow(d_mat))^(1/ncol(d_mat))
+    )
+
+all_models_simple <- all_models %>% select_if(Negate(is.list))
+```
+
+# Look at models 
+
+```{r}
+# in vs out 
+all_models %>%
+    ggplot(aes(x = out_of_sample, y = in_sample, col = itemtype)) + 
+    geom_point() +
+    geom_hline(yintercept = mean(d_mat), lty = 2) + 
+    geom_vline(xintercept = mean(d_mat), lty = 2) + 
+    geom_abline(lty = 3)  +
+    ggrepel::geom_label_repel(aes(label = factors)) +
+    labs(title = "SEE 7_BASELINE.R FOR BASELINE COMPARISONS")
+
+# in-sample
+all_models_simple %>%
+    ggplot(aes(x = n_pars, y = in_sample, label = paste0(factors, "_", itemtype))) +
+    geom_point() +
+    ggrepel::geom_text_repel()
+
+# out-of-sample
+all_models_simple %>%
+    ggplot(aes(x = n_pars, y = out_of_sample, label = paste0(factors, "_", itemtype))) +
+    geom_point() +
+    ggrepel::geom_text_repel()
+
+# just the good ones
+all_models_simple %>%
+    top_n(5, out_of_sample) %>% 
+    ggplot(aes(x = n_pars, y = out_of_sample, label = paste0(factors, "_", itemtype))) +
+    geom_point() +
+    ggrepel::geom_text_repel()
+```
+
+# Analyze specific model
+
+```{r}
+model_id <- 6
+```
+
+## items 
+
+```{r}
+items <- get_items(all_models$model_full[[model_id]])
+items %>% View()
+
+items %>%
+    select(
+        area, abbrev, matches("^a\\d"), starts_with("^d\\d"), g
+    ) %>%
+    gather(var, val, -area, -abbrev) %>%
+    group_by(area, var) %>%
+    summarize(mean = mean(val)) %>%
+    ggplot(aes(x = area, y = mean)) +
+    geom_col() +
+    facet_wrap(~ var, scales = "free_y") +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+ggpairs(
+    select(items, -id, -abbrev, -u, -month, -eng),
+    aes(alpha = 0.25, color = area),
+    lower = list(continuous = wrap("smooth")),
+    title = "Items"
+)
+
+# this takes way too long...
+# fit <- 
+#     itemfit(
+#         all_models$model_full[[model_id]], 
+#         fit_stats = "S_X2", # QMC = TRUE
+#     ) 
+```
+
+## kids
+
+```{r}
+kids <- get_kids(all_models$fscores[[model_id]])
+kids %>% View()
+
+x <- kids %>% 
+    mutate(F1 = round(F1, 3)) %>% 
+    pull(F1)
+
+kids %>%
+    mutate(age = midcut(age, 0, 60, 5)) %>%
+    gather(var, val, -id, -age) %>%
+    group_by(age, var) %>%
+    summarize(mean = mean(val)) %>%
+    ggplot(aes(x = age, y = mean)) +
+    geom_point() +
+    facet_wrap(~ var)
+
+# whats up with the clumping? (look at histogram for high discrimination items...)
+ggpairs(
+    select(kids, -id),
+    aes(alpha = 0.01),
+    title = "Kids"
+)
+```

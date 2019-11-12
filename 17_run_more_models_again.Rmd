@@ -1,0 +1,95 @@
+---
+title: "15_run_more_models"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mirt)
+mirtCluster()
+library(rsample)
+theme_set(theme_classic(base_size = 14))
+options(pillar.sigfig = 6)
+
+R.utils::sourceDirectory("~/Google_Drive/5_Projects/irt_comparison3/R")
+source("15_functions.R")
+
+areas <- read_rds("data-clean/areas.rds")
+d_mat <- read_rds("data-clean/d_mat.rds")
+item_area <- areas$area[match(colnames(d_mat), areas$paste)]
+
+splits_d_mat <- vfold_cv(d_mat, v = 6) # crank
+```
+
+full models
+
+```{r}
+mirts <- 
+  tribble(
+    ~factors,  ~itemtype,
+        "4",      "2PL"
+  ) %>% 
+    mutate(
+        model_full =
+            map2(
+                map(factors, fix_factors),
+                itemtype,
+                ~ mirt(
+                    d_mat,
+                    .x, 
+                    .y,
+                    # quadpts = 6, (best to use built in formula — perhaps?)
+                    technical = list(NCYCLES = 400) # crank
+                )
+            )
+    )
+```
+
+next step
+
+```{r}
+mirts2 <- 
+  mirts %>% 
+  mutate(
+    log_lik = map_dbl(model_full, logLik),
+    n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
+    fscores = map(model_full, fscores)
+  )
+```
+
+another step
+
+```{r}
+mirts3 <- 
+  mirts2 %>% 
+    mutate(
+        splits_with_log_lik = 
+            map2(
+                factors, 
+                itemtype, 
+                factors_itemtype_splits_df_to_splits_with_log_lik, 
+                splits_d_mat,
+                n_cycles = 400, # crank
+                verbose = TRUE,
+                method = "EM"
+      )
+  )
+```
+
+what's left
+
+```{r}
+mirts4 <- 
+  mirts3 %>% 
+    mutate(
+        ll_person = 
+          splits_with_log_lik %>% 
+          map_dbl(~ exp(sum(.$log_lik_test) / nrow(d_mat))),
+        
+        ll_person_item = ll_person ^ (1 / ncol(d_mat))
+  )
+
+mirts4 %>% write_rds("17_mirts_just_4_factor.rds")
+```
+

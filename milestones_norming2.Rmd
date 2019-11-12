@@ -250,7 +250,7 @@ mod_2pl <- mirt(d_mat, 1, itemtype='2PL', verbose=TRUE, TOL = 0.0001)
 
 mod_3pl <- mirt(d_mat, 1, itemtype='3PL', verbose=TRUE, TOL = 0.0001)
 
-mod_4pl <- mirt(d_mat, 1, itemtype='4PL', verbose=TRUE, TOL = 0.00000001)
+mod_4pl <- mirt(d_mat, 1, itemtype='4PL', verbose=TRUE, TOL = 0.001)
 
 anova(mod_2pl, mod_3pl)
 anova(mod_4pl, mod_3pl)
@@ -327,7 +327,7 @@ ggplot(coefs_4pl,
 ## Multi-factor model
 
 ```{r}
-mod_2f <- mirt(d_mat, 2, itemtype='4PL', verbose=TRUE)
+mod_2f <- mirt(d_mat, 2, itemtype='4PL', verbose=TRUE, technical = list(NCYCLES = 10))
 
 mod_2f3 <- mirt(d_mat, 2, itemtype='3PL', verbose=TRUE)
 

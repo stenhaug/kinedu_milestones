@@ -1,0 +1,126 @@
+---
+title: "8_comparing_models_again"
+output: html_document
+---
+
+I presented results from 6 and 7 to Mike — this is going back and redoing and cranking things up etc. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mirt)
+mirtCluster()
+library(rsample)
+theme_set(theme_classic(base_size = 14))
+options(pillar.sigfig = 6)
+
+R.utils::sourceDirectory("~/Google_Drive/5_Projects/irt_comparison3/R")
+source("6_functions.R")
+
+areas <- read_rds("data-clean/areas.rds")
+d_mat <- read_rds("data-clean/d_mat.rds")
+item_area <- areas$area[match(colnames(d_mat), areas$paste)]
+
+splits_d_mat <- vfold_cv(d_mat, v = 4) # crank
+```
+
+# Run
+
+mirts
+
+```{r}
+mirts <- 
+  tribble(
+    ~factors,  ~itemtype,
+        "1",      "Rasch",
+        "2",      "2PL",
+        "3",      "2PL"
+  ) %>% 
+    mutate(
+        model_full =
+            map2(
+                map(factors, fix_factors),
+                itemtype,
+                ~ mirt(
+                    d_mat,
+                    .x, 
+                    .y,
+                    # quadpts = 6, (best to use built in formula — perhaps?)
+                    technical = list(NCYCLES = 1000) # crank
+                )
+            ),
+        log_lik = map_dbl(model_full, logLik),
+        n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
+        fscores = map(model_full, fscores)
+    ) %>% 
+    mutate(
+        splits_with_log_lik = 
+            map2(
+                factors, 
+                itemtype, 
+                factors_itemtype_splits_df_to_splits_with_log_lik, 
+                splits_d_mat,
+                n_cycles = 1000, # crank
+                verbose = TRUE
+      )
+  ) %>% 
+    mutate(
+        ll_person = 
+          splits_with_log_lik %>% 
+          map_dbl(~ exp(sum(.$log_lik_test) / nrow(d_mat))),
+        ll_person_item = ll_person ^ (1 / ncol(d_mat))
+  )
+
+mirts %>% write_rds("8_mirts.rds")
+```
+
+bifactors
+
+```{r}
+bifactors <- 
+  tribble(
+    ~factors,  ~itemtype,
+    "bifact_all",  "2PL"
+  ) %>% 
+  mutate(
+        model_full =
+            map(
+                map(factors, bifactor_to_specific),
+                ~ bfactor(d_mat, ., technical = list(NCYCLES = 1000)) # crank
+            ),
+        log_lik = map_dbl(model_full, logLik),
+        n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
+        fscores = map(model_full, fscores)
+    ) %>% 
+    mutate(
+        splits_with_log_lik = 
+            map(
+                factors, 
+                BBBfactors_splits_df_to_splits_with_log_lik, 
+                splits_d_mat,
+                n_cycles = 1000,
+                verbose = FALSE
+            )
+  ) %>% 
+    mutate(
+        ll_person = 
+          splits_with_log_lik %>% 
+          map_dbl(~ exp(sum(.$log_lik_test) / nrow(d_mat))),
+        ll_person_item = ll_person ^ (1 / ncol(d_mat))
+  )
+
+bifactors %>% write_rds("8_bifactors.rds")
+```
+
+# Analyze
+
+- being able to turn down quadpoints as opposed to nycycles seems like it would be an improvement
+- plot shaded by age like mike had etc.
+- item fit statistics 
+- simple commands to get out plots and coefficients 
+- bifactor
+- graph npars train log lik
+- graph npars test log lik
+- vary estimation strategy?
+- run many times to get sense of standard error
+

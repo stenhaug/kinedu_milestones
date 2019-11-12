@@ -1,0 +1,110 @@
+---
+title: "13_splits_by_age"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(mirt)
+mirtCluster()
+library(rsample)
+theme_set(theme_classic(base_size = 14))
+options(pillar.sigfig = 6)
+
+R.utils::sourceDirectory("~/Google_Drive/5_Projects/irt_comparison3/R")
+source("6_functions.R")
+
+areas <- read_rds("data-clean/areas.rds")
+d <- read_rds("data-clean/d.rds")
+d_mat <- read_rds("data-clean/d_mat.rds")
+item_area <- areas$area[match(colnames(d_mat), areas$paste)]
+```
+
+Write a function that I can simply pass 
+
+```{r}
+split_and_run <- function(d_mat){
+    
+    splits_d_mat <- vfold_cv(d_mat, v = 6)
+    
+    mirts <- 
+      tribble(
+        ~factors,  ~itemtype,
+            "1",      "Rasch",
+            "1",      "2PL",
+            "2",      "2PL",
+            "3",      "2PL"
+      ) %>% 
+        mutate(
+            model_full =
+                map2(
+                    map(factors, fix_factors),
+                    itemtype,
+                    ~ mirt(
+                        d_mat,
+                        .x, 
+                        .y,
+                        # quadpts = 6, (best to use built in formula — perhaps?)
+                        technical = list(NCYCLES = 1000) # crank
+                    )
+                ),
+            log_lik = map_dbl(model_full, logLik),
+            n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
+            fscores = map(model_full, fscores)
+        ) %>% 
+        mutate(
+            splits_with_log_lik = 
+                map2(
+                    factors, 
+                    itemtype, 
+                    factors_itemtype_splits_df_to_splits_with_log_lik, 
+                    splits_d_mat,
+                    n_cycles = 1000, # crank
+                    verbose = TRUE
+          )
+      ) %>% 
+        mutate(
+            ll_person = 
+              splits_with_log_lik %>% 
+              map_dbl(~ exp(sum(.$log_lik_test) / nrow(d_mat))),
+            ll_person_item = ll_person ^ (1 / ncol(d_mat))
+      )
+
+    mirts
+}
+```
+
+Now we can run!
+
+```{r}
+agg_age <- 
+    d %>% 
+    group_by(id) %>% 
+    summarize(age = age[1]) %>% 
+    filter(age > 1) %>% 
+    mutate(year = age %/% 12 + 1)
+
+out <- 
+    tibble(years = list(1, 2, 3, c(4, 5))) %>% 
+    mutate(d_mat = years %>% map(~ d_mat[row.names(d_mat) %in% filter(agg_age, year %in% .)$id, ])) %>% 
+    mutate(d_mat_filter = d_mat %>% map(~ .[ , colMeans(.) > 0.025 & colMeans(.) < 0.975])) %>% 
+    mutate(models = d_mat_filter %>% map(split_and_run))
+```
+
+
+```{r}
+out %>% write_rds("13_splits_by_age.rds")
+```
+
+
+I thought this idea of limiting to all have the same items was a good idea but now I'm thinking differently
+
+```{r}
+# to avoid different sample sizes in each matrix lets filter to all be the smallest which is the 4th one
+out <- 
+    out %>% 
+    mutate(d_mat_filter = d_mat %>% map(~ .[ , colnames(.) %in% colnames(out$d_mat_filter[[4]])])) %>% 
+    mutate(models = d_mat_filter %>% map(split_and_run))
+```
+

@@ -1,0 +1,82 @@
+---
+title: "01a_factor_analysis"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+
+wide <- 
+    read_rds("data-clean/d.rds") %>% 
+    dplyr::select(-gestation, -kinder, -diagnosis, -category) %>% 
+    spread(code, response) %>% 
+    select(-id)
+```
+
+```{r}
+scree(cor(wide), pc = FALSE)
+
+?scree
+
+fa.parallel(Thurstone,n.obs=213)
+```
+
+
+with age
+
+```{r}
+library(nFactors)
+ev <- eigen(cor(wide))
+ap <- parallel(subject=nrow(wide),var=ncol(wide), rep=100, cent=.05)
+nS <- nScree(x=ev$values, aparallel=ap$eigen$qevpea)
+plotnScree(nS)
+```
+
+without age
+
+```{r}
+ev <- eigen(cor(wide %>% dplyr::select(-age)))
+ap <- parallel(subject=nrow(wide %>% dplyr::select(-age)),var=ncol(wide %>% dplyr::select(-age)), rep=100, cent=.05)
+nS <- nScree(x=ev$values, aparallel=ap$eigen$qevpea)
+
+ben <- nS
+ben$Analysis <- ben$Analysis[1:15, ]
+plotnScree(ben)
+
+
+```
+
+varimax
+
+```{r}
+fit <- factanal(wide, 5, rotation = "oblimin")
+
+solution <- fa(r = cor(wide), nfactors = 2, rotate = "oblimin")
+
+scree(solution)
+
+scree(cor(wide %>% dplyr::select(-age)), pc = FALSE)
+
+?scree
+
+
+
+psy::scree.plot(fit$correlation)
+```
+
+# THIS IS A PRETTY COOL PLOT DUDE
+
+```{r}
+wide %>% 
+    gather(var, val, -age) %>% 
+    group_by(age, var) %>% 
+    summarize(m = mean(val)) %>% 
+    ggplot(aes(x = age, y = m)) +
+    geom_point(alpha = 0.1)
+```
+
+
+
+
+

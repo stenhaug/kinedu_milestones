@@ -3,6 +3,8 @@ title: "01a_factor_analysis"
 output: github_document
 ---
 
+In hindsight, I don't think we learned much here...
+
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)

@@ -45,6 +45,8 @@ Figure 1 shows the age (in months) and number of developmental milestones for ea
 
 We frame the assessment of the dimensionality of child development as a model comparison question. 
 
+$P(A^C) = 1 - P(A)$
+
 ## Models
 
 Item response theory offers a suite of models with which to model item response data. We adopt the notation used in @chalmers2012mirt. Let $i = 1, \ldots, I$ represent the distinct children and $j = 1, \ldots, J$ the developmental milestones. The Kinedu item response data is stored in a matrix, $y$, where element $y_{ij}$ denotes if the $i$th child has or has not achieved the $j$th developmental milestone as reported by their parent/guardian. Each model represents the $i$th child's development using $m$ latent factors $\boldsymbol{\theta}_{i}=(\theta_1, \ldots, \theta_m)$. The $j$th milestone's discriminations (i.e. slopes) $\boldsymbol{\alpha}_{j}=(\alpha_{1}, \dots, \alpha_{m})$ capture the latent factor loadings onto that milestone.

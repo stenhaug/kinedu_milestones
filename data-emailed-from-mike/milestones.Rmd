@@ -28,12 +28,12 @@ library(tidyverse)
 # library(ggrepel)
 # library(DT)
 select <- dplyr::select
-source("predictQR_fixed.R")
+source("data-emailed-from-mike/predictQR_fixed.R")
 # theme_set(theme_few())
 ```
 
 ```{r}
-d_raw <- readxl::read_xlsx("data/Kinedu Norming Survey Raw Data - May 15 2018.xlsx")
+d_raw <- readxl::read_xlsx("data/norming2/Kinedu Norming Survey Raw Data - May 15 2018.xlsx")
 ```
 
 ```{r}
@@ -45,13 +45,13 @@ milestone_labels <- d_raw %>%
   mutate(short_name = str_sub(name, start = 0, end = 60))
 
 d <- d_raw %>%
-  rename(age = X__8, 
-         gestation = X__3,
-         kinder = X__4,
-         diagnosis = X__1, 
+  rename(age = `...423`, 
+         gestation = `...4`,
+         kinder = `...5`,
+         diagnosis = `...2`, 
          id = `Nombre variable`) %>%
   slice(4:n()) %>% # drop two top label rows. 
-  select(-starts_with("X")) %>%
+  select(-starts_with("...")) %>%
   gather(code, response, abs_183:color_679) %>%
   mutate(code2 = code) %>%
   separate(code2, into = c("category","number")) %>%
@@ -67,9 +67,9 @@ We begin with some descriptions of the dataset. The age distribution is very con
 ```{r}
 ages <- d %>%
   group_by(id) %>%
-  summarise(age = age[1])
+  summarise(age = age[1] %>% as.numeric())
 
-qplot(age, data = ages, binwidth = 1)
+qplot(age, data = ages)
 ```
 
 The maternal education distribution is heavily skewed towards college and higher, so we can't learn much about socioeconomic effects here. Note that I have rebinned education into a small number of bins, such that "Carrera" and "Maestría/Doctorado" are grouped as "College and Above," and "Carrera técnica," "Comenzó universidad" and "Preparatoria" are grouped as "Secondary."

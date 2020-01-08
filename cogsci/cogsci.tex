@@ -1,0 +1,148 @@
+% Template for Cogsci submission with R Markdown
+
+% Stuff changed from original Markdown PLOS Template
+\documentclass[10pt, letterpaper]{article}
+
+\usepackage{cogsci}
+\usepackage{pslatex}
+\usepackage{float}
+\usepackage{caption}
+
+% amsmath package, useful for mathematical formulas
+\usepackage{amsmath}
+
+% amssymb package, useful for mathematical symbols
+\usepackage{amssymb}
+
+% hyperref package, useful for hyperlinks
+\usepackage{hyperref}
+
+% graphicx package, useful for including eps and pdf graphics
+% include graphics with the command \includegraphics
+\usepackage{graphicx}
+
+% Sweave(-like)
+\usepackage{fancyvrb}
+\DefineVerbatimEnvironment{Sinput}{Verbatim}{fontshape=sl}
+\DefineVerbatimEnvironment{Soutput}{Verbatim}{}
+\DefineVerbatimEnvironment{Scode}{Verbatim}{fontshape=sl}
+\newenvironment{Schunk}{}{}
+\DefineVerbatimEnvironment{Code}{Verbatim}{}
+\DefineVerbatimEnvironment{CodeInput}{Verbatim}{fontshape=sl}
+\DefineVerbatimEnvironment{CodeOutput}{Verbatim}{}
+\newenvironment{CodeChunk}{}{}
+
+% cite package, to clean up citations in the main text. Do not remove.
+\usepackage{apacite}
+
+% KM added 1/4/18 to allow control of blind submission
+\cogscifinalcopy
+
+\usepackage{color}
+
+% Use doublespacing - comment out for single spacing
+%\usepackage{setspace}
+%\doublespacing
+
+
+% % Text layout
+% \topmargin 0.0cm
+% \oddsidemargin 0.5cm
+% \evensidemargin 0.5cm
+% \textwidth 16cm
+% \textheight 21cm
+
+\title{The latent factor structure of child development}
+
+\usepackage{bm}
+
+\author{Anonymous Cogsci Submission}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Hello
+
+\textbf{Keywords:}
+one; two;
+\end{abstract}
+
+\hypertarget{introduction}{%
+\section{Introduction}\label{introduction}}
+
+A child's development can be thought of as the set of developmental
+milestones that they have reached at a particular point in time. This
+conceptualization results in data with the same structure as the item
+response data common to educational measurement. In education, item
+response data is most typically students responding to test items (i.e.,
+questions) and, in the dichotomous case, getting each question either
+correct or incorrect. In the context of child development, the child is
+the ``student,'' and each developmental milestone is the ``item.''
+
+We use Kinedu, a Mexico-based child development app, as a source for
+this type of data. When parents first start using the Kinedu app, they
+are asked a series of questions about which developmental milestones
+their child has reached. We consider the 1946 children between 2 and 55
+months of age whose parents responded to all 414 of the developmental
+milestones. Each developmental miletone on Kinedu is mapped to a
+milestone group: physical, cognitive, linguistic, or social \&
+emotional. Table 1 shows the number of developmental milestones in each
+group along with an example milestone in Spanish (as its shown to the
+parent) and its translation in English.
+
+Figure 1 shows the age (in months) and number of developmental
+milestones for each child. As can be seen in Figure 1, at 12 months of
+age, most children have reached about 200 developmental milestones. At
+24 months of age, most children have reached about 300 developmental
+milestones. Finally, at 48 months of age, most children have reached
+about 375 of the 414 developmental milestones.
+
+\hypertarget{empirical-assessment-of-the-dimensionality-of-child-development}{%
+\section{Empirical assessment of the dimensionality of child
+development}\label{empirical-assessment-of-the-dimensionality-of-child-development}}
+
+We frame the assessment of the dimensionality of child development as a
+model comparison question.
+
+\hypertarget{models}{%
+\subsection{Models}\label{models}}
+
+Item response theory offers a suite of models with which to model item
+response data. We adopt the notation used in Chalmers \& others (2012).
+Let \(i = 1, \ldots, I\) represent the distinct children and
+\(j = 1, \ldots, J\) the developmental milestones. The Kinedu item
+response data is stored in a matrix, \(y\), where element \(y_{ij}\)
+denotes if the \(i\)th child has or has not achieved the \(j\)th
+developmental milestone as reported by their parent/guardian. Each model
+represents the \(i\)th child's development using \(m\) latent factors
+\(\boldsymbol{\theta}_{i}=(\theta_1, \ldots, \theta_m)\). The \(j\)th
+milestone's discriminations (i.e.~slopes)
+\(\boldsymbol{\alpha}_{j}=(\alpha_{1}, \dots, \alpha_{m})\) capture the
+latent factor loadings onto that milestone.
+
+\hypertarget{acknowledgements}{%
+\section{Acknowledgements}\label{acknowledgements}}
+
+We'd like to thank Kinedu for providing the data that made this research
+possible.
+
+\hypertarget{references}{%
+\section{References}\label{references}}
+
+\setlength{\parindent}{-0.1in} 
+\setlength{\leftskip}{0.125in}
+
+\noindent
+
+\hypertarget{refs}{}
+\leavevmode\hypertarget{ref-chalmers2012mirt}{}%
+Chalmers, R. P., \& others. (2012). Mirt: A multidimensional item
+response theory package for the r environment. \emph{Journal of
+Statistical Software}, \emph{48}(6), 1--29.
+
+\bibliographystyle{apacite}
+
+
+\end{document}

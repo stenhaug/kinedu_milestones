@@ -35,7 +35,7 @@ fix_factors <- function(x){
 }
 
 factors_itemtype_splits_df_to_splits_with_log_lik <-
-    function(factors, itemtype, splits_df, n_cycles, verbose){
+    function(factors, itemtype, splits_df, n_cycles, verbose, the_method){
         splits_df %>%
             mutate(
                 model =
@@ -47,7 +47,8 @@ factors_itemtype_splits_df_to_splits_with_log_lik <-
                             itemtype = itemtype,
                             TOL = 0.0002, # could crank
                             technical = list(theta_lim = c(-6, 6), NCYCLES = n_cycles),
-                            verbose = verbose
+                            verbose = verbose,
+                            method = the_method
                         )
                     ) %>%
                     map(~ do.call(mirt, .)),

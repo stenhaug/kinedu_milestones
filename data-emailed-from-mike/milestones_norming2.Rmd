@@ -29,7 +29,7 @@ library(quantregGrowth)
 # library(DT)
 library(mirt)
 select <- dplyr::select
-source("predictQR_fixed.R")
+source("data-emailed-from-mike/predictQR_fixed.R")
 # theme_set(theme_few())
 ```
 
@@ -140,7 +140,7 @@ Let's remove these more or less by hand. We'll just remove all the `age = 0` kid
 
 ```{r}
 excl <- by_age %>%
-  filter(age == 0) %>%
+  filter(age <= 1) %>%
   pull(id)
 
 by_age <- filter(by_age, !(id %in% excl))
@@ -153,7 +153,7 @@ Replot.
 mod <- gcrq(formula = response ~ ps(age, monotone = 1, lambda = 1000), 
      tau = taus, data = by_age)
 
-ages <- 1:48
+ages <- 1:55
 newdata <- data.frame(age = ages)
 
 preds <- predictQR_fixed(mod, newdata = newdata) %>%
@@ -167,7 +167,7 @@ ggplot(by_age,
   geom_jitter(height = 0, width = .2, alpha = .3) + 
   geom_line(data = preds, aes(x = age, y = pred, col = percentile, group = percentile)) + 
   ylim(0,n_milestones) + 
-  xlim(0,48) + 
+  xlim(0,55) + 
   ylab("Total milestones") + 
   xlab("Age (months)") + 
   ggthemes::scale_color_solarized() + 

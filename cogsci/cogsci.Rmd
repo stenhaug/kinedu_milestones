@@ -45,13 +45,39 @@ Figure 1 shows the age (in months) and number of developmental milestones for ea
 
 We frame the assessment of the dimensionality of child development as a model comparison question. 
 
-$P(A^C) = 1 - P(A)$
-
 ## Models
 
-Item response theory offers a suite of models with which to model item response data. We adopt the notation used in @chalmers2012mirt. Let $i = 1, \ldots, I$ represent the distinct children and $j = 1, \ldots, J$ the developmental milestones. The Kinedu item response data is stored in a matrix, $y$, where element $y_{ij}$ denotes if the $i$th child has or has not achieved the $j$th developmental milestone as reported by their parent/guardian. Each model represents the $i$th child's development using $m$ latent factors $\boldsymbol{\theta}_{i}=(\theta_1, \ldots, \theta_m)$. The $j$th milestone's discriminations (i.e. slopes) $\boldsymbol{\alpha}_{j}=(\alpha_{1}, \dots, \alpha_{m})$ capture the latent factor loadings onto that milestone.
+Item response theory offers a suite of models with which to model item response data. We adopt the notation used in @chalmers2012mirt. Let $i = 1, \ldots, I$ represent the distinct children and $j = 1, \ldots, J$ the developmental milestones. The Kinedu item response data is stored in a matrix, $y$, where element $y_{ij}$ denotes if the $i$th child has or has not achieved the $j$th developmental milestone as reported by their parent/guardian. Each model represents the $i$th child's development using $m$ latent factors $\boldsymbol{\theta}_{i}=(\theta_1, \ldots, \theta_m)$. The $j$th milestone's discriminations (i.e. slopes) $\boldsymbol{a_j}=(a_1, \dots, a_m)$ capture the latent factor loadings onto that milestone.
 
-difficulty or intercept!
+We fit four two-parametric logistic (2PL) models where a child’s development is represented by $m = 1, m = 2, m = 3,$ and $m = 4$ latent factors. According to the 2PL model, the probability of a child having achieved a developmental milestone is
+$$
+P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbol{a}_{j}^{\top}\boldsymbol{\theta_i} + b_j)
+$$
+where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function.
+
+The 2PL models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table X. For the bifactor model, the probability of a child having achieved a developmental milestone is 
+$$
+P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s + b_j).
+$$
+
+## Model comparison
+
+Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work at modest sample sizes [@mcdonald1995goodness]. Instead, we prefer a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
+
+Mathematically and following notation similar to @vehtari2017practical, we partition the data into $K$ subsets $y^{(k)}$ for $k = 1, \ldots, K$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\boldsymbol{\Psi}^{(-k)}$. The predictive (i.e. out-of-sample) likelihood of $y^{(k)}$ is
+
+$$
+p(y^{(k)} | y^{(-k)}) = \prod_{i \in i^{(k)}}^{I} \int_\theta \prod_{j=1}^{J} \hat{\text{Pr}}(y_{ij}^{(k)} | \Psi_j^{(-k)}, \theta) g(\theta)d\theta.
+$$
+
+The ultimate quantity of interest for each model is the log predictive likelihood for the entire item response matrix, which is defined as
+
+$$
+\text{lpl } y = \sum_{k = 1}^{K} \log p(y^{(k)} | y^{(-k)}).
+$$
+## Results
+
+HELLO
 
 # Acknowledgements
 

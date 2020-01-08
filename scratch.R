@@ -65,12 +65,17 @@ what <-
     left_join(areas)
 
 what %>%
-    select(group = area, F1, F2, F3) %>%
-    gather(var, val, -group) %>%
+    select(Group = area, F1, F2, F3) %>%
+    gather(var, val, -Group) %>%
     mutate(val = -val) %>%
-    ggplot(aes(x = val, fill = group)) +
+    ggplot(aes(x = val, fill = Group)) +
     ggridges::geom_density_line(alpha = 0.5) +
-    facet_wrap(~ var, ncol = 1)
+    facet_wrap(~ var, ncol = 1) +
+    labs(
+        x = "Item discrimination (or slope)",
+        y = "Density",
+        title = "Milestone loadings by factor"
+    )
 
 f <- fscores(mod3, rotate = "varimax")
 
@@ -78,9 +83,15 @@ f %>%
     as_tibble() %>%
     mutate(age = ages$age) %>%
     gather(var, val, -age) %>%
+    mutate(val = -val) %>%
     ggplot(aes(x = age, y = val)) +
     geom_point(alpha = 0.1) +
     facet_wrap(~ var, ncol = 1) +
-    geom_smooth(method = "lm")
+    geom_smooth(method = "lm") +
+    labs(
+        x = "Age (in months)",
+        y = "Factor score",
+        title = "The first factor is highly associated with age"
+    )
 
 mean(row.names(d_mat) == ages$id)

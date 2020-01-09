@@ -80,10 +80,10 @@
 \maketitle
 
 \begin{abstract}
-TO DO
+\myworries{to do}
 
 \textbf{Keywords:}
-child development; milestones; IRT; cross-validation;
+child development; milestones; item response theory; model comparison
 \end{abstract}
 
 \hypertarget{introduction}{%
@@ -122,7 +122,7 @@ English.
 \fontsize{8}{10}\selectfont
 \begin{tabular}[t]{l|r|l}
 \hline
-Group & Count & Milestone\\
+Group & Count & Example milestone\\
 \hline
 Physical & 180 & Stands on their toes\\
 \hline
@@ -240,18 +240,20 @@ likelihood for the entire item response matrix, which is defined as
 Table \ref{tab:results} shows the number of parameters, the in-sample
 log likelihood (which neccessarily increases with more parameters), and
 the \(\text{lpl } y\) defined in the
-\protect\hyperlink{modelcompare}{model comparison} section. The 4F 2PL
+\protect\hyperlink{modelcompare}{model comparison section}. The 4F 2PL
 model performs best which is evidence that child development between the
 ages of 2 and 55 months follows a multidimensional path.
 
-\textcolor{red}{what else to add here?}
+\textcolor{red}{need to tie results to literature}
 
 Computing is done in R (R Core Team, 2019), model fitting in the R
 package mirt (Chalmers \& others, 2012), and data
 wrangling/visualization in the set of R packages known as the tidyverse
 (Wickham, 2017).
 
-\textcolor{red}{Table \ref{tab:results} can be made clearer}
+\textcolor{red}{think about presentation of this table.}
+\textcolor{red}{is it worth displaying in sample numbers?}
+\textcolor{red}{would it be better as a graph?}
 
 \begin{CodeChunk}
 \begin{table}[!h]
@@ -334,12 +336,33 @@ age. Second, we partition the data by age and use the same
 cross-validation procedure to find the best fitting model in each
 partition.
 
-\hypertarget{full-model}{%
-\subsection{Full model}\label{full-model}}
+\hypertarget{full}{%
+\subsection{Full model}\label{full}}
 
-\textcolor{red}{figure currently shows up at end of paper}
+\textcolor{red}{figure currently shows up at end of paper.}
+\textcolor{red}{if we go with this graph,}
+\textcolor{red}{probably want more smoothing}
 
-Figure \ref{fig:byage} shows \ldots{}
+Figure \ref{fig:byage} displays the mean cross-validated log likelihood
+for each model by age, which comes from the k-fold cross-validation
+described in the \protect\hyperlink{modelcompare}{model comparison}
+section. For each student, we calculate the marginalized out-of-sample
+likelihood based on the item parameters \(\Psi_j^{(-k)}\) from fitting
+the model to \(y^{(-k)}\), the folds of data that does not include the
+student. As a reminder, students are assigned to folds randomly and not
+by age.
+
+Figure \ref{fig:byage} shows that cross-validated log likelihood is
+highest for very young (less than 8 months old) and older (greater than
+48 months old) children. This is not surprising as the number of
+milestones for each of these age groups is relatively close to 0\% and
+100\% respectively. More importantly, we see that the 2F 2PL model
+performs best for children two to six months old. The 2F 2PL model
+performs as well as the 4F 2PL model for children from six months old to
+11 months old. For children older than 11 months old, the 4F 2PL model
+tends to perform best. Interestingly, the bifactor model performs more
+similarly across the age-span to the 4F 2PL than the 2F 2PL despite
+having a similar number of parameters to the 2F 2PL.
 
 \begin{CodeChunk}
 \begin{figure}[tb]
@@ -349,6 +372,38 @@ Figure \ref{fig:byage} shows \ldots{}
 
 \hypertarget{age-partitioned-models}{%
 \subsection{Age-partitioned models}\label{age-partitioned-models}}
+
+\textcolor{red}{figure currently shows up at end of paper.}
+\textcolor{red}{need to add in 4F models}
+
+As another method of examining the dimensionality of child development
+across the age span, we create four partitions of the data based on the
+ages of the children. We then cross-validate the 2PL models
+independently in each partition. This allows us to examine the
+dimensionality for each age group separately. For each age partition, we
+drop milestones where less than 2.5\% or greater than 97.5\% of children
+have reached the milestone. Dropping milestones is done because these
+milestones do not contain much information and make IRT models less
+stable. This process results in, for example, 432 children and 359
+milestones in the 13-24 month old partition.
+
+\textcolor{red}{should we note (or sensitivity check)}
+\textcolor{red}{the tendency smaller datasets}
+\textcolor{red}{to prefer less flexible models?}
+
+Figure \ref{fig:partage} shows the results of this analysis. Consistent
+with our findings in the \protect\hyperlink{full}{previous section}, the
+best fitting model contains a lower dimensional factor structure for
+younger children. The best fitting model is the 2F 2PL for the partition
+of data containing children two to 12 months old, whereas the best
+fitting model is the 3F 2PL for the partitions containing older
+children.
+
+\begin{CodeChunk}
+\begin{figure}[tb]
+\includegraphics{figs/partage-1} \caption[2F 2PL best for young kids]{2F 2PL best for young kids; 3F 2PL best for older kids}\label{fig:partage}
+\end{figure}
+\end{CodeChunk}
 
 \hypertarget{discussion}{%
 \section{Discussion}\label{discussion}}

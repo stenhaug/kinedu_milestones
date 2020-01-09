@@ -8,10 +8,10 @@ author-information: >
     \author{Anonymous Cogsci Submission}
 
 abstract: >
-    TO DO
+    \myworries{to do}
     
 keywords: >
-    child development; milestones; IRT; cross-validation;
+    child development; milestones; item response theory; model comparison
     
 output: cogsci2016::cogsci_paper
 header-includes:
@@ -196,15 +196,20 @@ $$
 \myworries{fascinating that dropping 1 month olds}
 \myworries{changed the winner from 3F to 4F}
 
-Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which neccessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison](#modelcompare) section. The 4F 2PL model performs best which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
+Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which neccessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison section](#modelcompare). The 4F 2PL model performs best which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
 
-\myworries{what else to add here?}
+\myworries{need to tie results to literature}
 
 Computing is done in R [@rcore], model fitting in the R package mirt [@chalmers2012mirt], and data wrangling/visualization in the set of R packages known as the tidyverse [@tidy].
 
-\myworries{Table \ref{tab:results} can be made clearer}
+\myworries{think about presentation of this table.}
+\myworries{is it worth displaying in sample numbers?}
+\myworries{would it be better as a graph?}
 
 ```{r results}
+# will need latek in kables:
+# https://stackoverflow.com/questions/49416492/latex-formulas-or-symbols-in-table-cells-using-knitr-and-kableextra-in-r-markdow
+
 mirts <- read_rds(here::here("02_mirts.rds"))
 bifactor <- read_rds(here::here("02_bifactors.rds"))
 
@@ -301,11 +306,15 @@ f %>%
 
 For all of the data, we’ve shown evidence that 4-factors performs best. But is this latent factor dimensionality consistent across age-span? For example, perhaps for very young children 1-factor is sufficient and then later on 2- and then 3-factors become valuable. We take two approaches to assessing the dimensionality of child development across the age-span. First, we examine the performance of each of the models by age. Second, we partition the data by age and use the same cross-validation procedure to find the best fitting model in each partition.
 
-## Full model
+## Full model {#full}
 
-\myworries{figure currently shows up at end of paper}
+\myworries{figure currently shows up at end of paper.}
+\myworries{if we go with this graph,}
+\myworries{probably want more smoothing}
 
-Figure \ref{fig:byage} shows ...
+Figure \ref{fig:byage} displays the mean cross-validated log likelihood for each model by age, which comes from the k-fold cross-validation described in the [model comparison](#modelcompare) section. For each student, we calculate the marginalized out-of-sample likelihood based on the item parameters $\Psi_j^{(-k)}$ from fitting the model to $y^{(-k)}$, the folds of data that does not include the student. As a reminder, students are assigned to folds randomly and not by age. 
+
+Figure \ref{fig:byage} shows that cross-validated log likelihood is highest for very young (less than 8 months old) and older (greater than 48 months old) children. This is not surprising as the number of milestones for each of these age groups is relatively close to 0% and 100% respectively. More importantly, we see that the 2F 2PL model performs best for children two to six months old. The 2F 2PL model performs as well as the 4F 2PL model for children from six months old to 11 months old. For children older than 11 months old, the 4F 2PL model tends to perform best. Interestingly, the bifactor model performs more similarly across the age-span to the 4F 2PL than the 2F 2PL despite having a similar number of parameters to the 2F 2PL. 
 
 ```{r byage, fig.cap = 'More flexible models perform better at older ages'}
 read_rds(here::here("03_model_by_age.rds")) %>%
@@ -330,6 +339,55 @@ read_rds(here::here("03_model_by_age.rds")) %>%
 ```
 
 ## Age-partitioned models
+
+\myworries{figure currently shows up at end of paper.}
+\myworries{need to add in 4F models}
+
+As another method of examining the dimensionality of child development across the age span, we create four partitions of the data based on the ages of the children. We then cross-validate the 2PL models independently in each partition. This allows us to examine the dimensionality for each age group separately. For each age partition, we drop milestones where less than 2.5% or greater than 97.5% of children have reached the milestone. Dropping milestones is done because these milestones do not contain much information and make IRT models less stable. This process results in, for example, 432 children and 359 milestones in the 13-24 month old partition.
+
+\myworries{should we note (or sensitivity check)}
+\myworries{the tendency smaller datasets}
+\myworries{to prefer less flexible models?}
+
+Figure \ref{fig:partage} shows the results of this analysis. Consistent with our findings in the [previous section](#full), the best fitting model contains a lower dimensional factor structure for younger children. The best fitting model is the 2F 2PL for the partition of data containing children two to 12 months old, whereas the best fitting model is the 3F 2PL for the partitions containing older children.
+
+```{r partage, fig.cap = '2F 2PL best for young kids; 3F 2PL best for older kids'}
+splits_by_age <- read_rds(here::here("archived/13_splits_by_age.rds"))
+
+add_lltest <- function(a){
+  a %>% 
+  mutate(
+    log_lik_test = 
+      splits_with_log_lik %>% 
+      map_dbl(~ sum(.$log_lik_test))
+  )
+}
+
+b <- splits_by_age %>% 
+  mutate(models2 = models %>% map(add_lltest))
+
+tibble(
+  years = c("2-12 months", "13-24 months", "25-36 months", "37+ months")
+) %>% 
+  mutate(
+    kids = splits_by_age$d_mat_filter %>% map_int(nrow),
+    items = splits_by_age$d_mat_filter %>% map_int(ncol),
+    m  = b$models2
+  ) %>% 
+  unnest() %>% 
+  select(years, kids, items, factors, itemtype, log_lik, log_lik_test) %>% 
+  mutate(var = as_factor(paste0(years, " ", kids, " kids", " ", items, " items"))) %>% 
+  filter(itemtype == "2PL") %>% 
+  ggplot(aes(x = factors, y = log_lik_test)) +
+  geom_point() +
+  geom_line(aes(group = years)) +
+  facet_wrap(~ var, ncol = 1, scales = "free") +
+  labs(
+    x = "m-factor 2PL model",
+    y = "Cross-validated log likelihood"
+  ) +
+  theme_classic(base_size = 8)
+```
 
 # Discussion
 

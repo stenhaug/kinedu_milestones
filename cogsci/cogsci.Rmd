@@ -164,14 +164,14 @@ P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbo
 $$
 where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function.
 
-The 2PL models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table X. For the bifactor model, the probability of a child having achieved a developmental milestone is 
+The 2PL models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table \ref{tab:examples}. For the bifactor model, the probability of a child having achieved a developmental milestone is 
 $$
 P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s + b_j).
 $$
 
 ## Model comparison
 
-Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes [@mcdonald1995goodness]. Instead, we prefer a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
+Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes or misspecification [@mcdonald1995goodness]. Instead, we prefer a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
 
 Mathematically and following notation similar to @vehtari2017practical, we partition the data into $K$ subsets $y^{(k)}$ for $k = 1, \ldots, K$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample) likelihood of $y^{(k)}$ is
 
@@ -187,18 +187,19 @@ $$
 
 ## Results
 
-HELLO
+Computing is done in R [@rcore], model fitting in the R package mirt [@chalmers2012mirt], and data wrangling/visualization in the set of R packages known as the tidyverse [@tidy].
 
 ## Understanding the latent factor structure
 
 To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor is mainly cognitive and linguistic. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly loads positively on linguistic milestones and negatively on physical milestones. 
 
-```{r factorloadings, fig.cap = 'Factor loadings by group'}
+```{r, include = FALSE}
 library(mirt)
 mod3 <- read_rds(here::here("scratch_mod3.rds"))
-
 mod3_summary <- summary(mod3, rotate = "varimax")
+```
 
+```{r factorloadings, fig.cap = 'Factor loadings by group'}
 mod3_summary_with_areas <-
     mod3_summary$rotF %>%
     as_tibble() %>%
@@ -217,7 +218,12 @@ mod3_summary_with_areas %>%
         x = "Factor loading (i.e. discrimination or slope)",
         y = "Density",
         title = "Milestone loadings by factor"
-    )
+    ) +
+    theme_classic(base_size = 8) + 
+    theme(legend.position = "bottom", 
+          legend.title = element_text(size = 6),
+          legend.text = element_text(size=6),
+          legend.key.size = unit(0.2, "cm"))
 ```
 
 We also estimate the factor scores for each child using expected a posteriori (EAP) with a three dimensional standard normal distribution [@embretson2013item].  Figure \ref{fig:factorscores} shows the relationship between age and factor score for each factor. The first factor, perhaps unsurprisingly, has a high correlation (r = 0.90) with age. The second factor has a strong association with age from 2 to 16 months but thereafter is unrelated to age. By and large, the third factor does not have any association with age.

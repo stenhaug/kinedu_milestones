@@ -33,7 +33,7 @@ d_mat <- d_mat[row.names(d_mat) %in% ages$id, ]
 splits_d_mat <- vfold_cv(d_mat, v = 5) # crank
 ```
 
-# mirts 1 and 2 (or all actually)
+# mirts
 
 ```{r}
 mirts <- 
@@ -81,58 +81,10 @@ mirts <-
         ll_person_item = ll_person ^ (1 / ncol(d_mat))
   )
 
-mirts %>% write_rds("02_mirts_1_and_2.rds")
+mirts %>% write_rds("02_mirts.rds")
 ```
 
-# mirts 3 and 4
-
-```{r}
-mirts <- 
-  tribble(
-    ~factors,  ~itemtype,
-        "3",      "2PL",
-        "4",      "2PL"    
-  ) %>% 
-    mutate(
-        model_full =
-            map2(
-                map(factors, fix_factors),
-                itemtype,
-                ~ mirt(
-                    d_mat,
-                    .x, 
-                    .y,
-                    method = "QMCEM", # might edit!
-                    technical = list(NCYCLES = 200) # crank
-                )
-            ),
-        log_lik = map_dbl(model_full, logLik),
-        n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
-        fscores = map(model_full, fscores)
-    ) %>% 
-    mutate(
-        splits_with_log_lik = 
-            map2(
-                factors, 
-                itemtype, 
-                factors_itemtype_splits_df_to_splits_with_log_lik, 
-                splits_d_mat,
-                n_cycles = 200, # crank
-                verbose = TRUE,
-                the_method = "QMCEM"
-      )
-  ) %>% 
-    mutate(
-        ll_person = 
-          splits_with_log_lik %>% 
-          map_dbl(~ exp(sum(.$log_lik_test) / nrow(d_mat))),
-        ll_person_item = ll_person ^ (1 / ncol(d_mat))
-  )
-
-mirts %>% write_rds("02_mirts_3_and_4.rds")
-```
-
-bifactors
+# bifactors
 
 ```{r}
 bifactors <- 

@@ -8,14 +8,17 @@ author-information: >
     \author{Anonymous Cogsci Submission}
 
 abstract: >
-    Hello
+    TO DO
     
 keywords: >
-    one; two;
+    child development; milestones; IRT; cross-validation;
     
 output: cogsci2016::cogsci_paper
 header-includes:
+- \usepackage{amsmath}
 - \usepackage{bm}
+- \usepackage{xcolor}
+- \newcommand\myworries[1]{\textcolor{red}{#1}}
 final-submission: \cogscifinalcopy
 ---
 
@@ -71,7 +74,7 @@ ms <- milestones %>% mutate(code = str_remove(code, " "))
 
 # Introduction
 
-TO DO
+\myworries{to do}
 
 # Data
 
@@ -90,7 +93,7 @@ areas %>%
     select(Group = area, Count = count, spanish = short_name) %>%
     select(-spanish) %>% 
     arrange(desc(Count)) %>%
-    mutate(Milestone = c(
+    mutate(`Example milestone` = c(
         "Stands on their toes",
         "Finds objects on the floor",
         "Babbles to imitate conversations",
@@ -101,6 +104,9 @@ areas %>%
 ```
 
 Figure \ref{fig:growth} shows the age (in months) and number of developmental milestones for each child. At 12 months old, most children have reached about 200 developmental milestones. At 24 months old, most children have reached about 300 developmental milestones. Finally, at 48 months old, most children have reached about 375 of the 414 developmental milestones.
+
+\myworries{probably should describe where}
+\myworries{the percentile curves come from}
 
 ```{r growth, fig.cap = 'Number of milestones by age', warning = FALSE}
 source(here::here("data-emailed-from-mike/predictQR_fixed.R"))
@@ -156,24 +162,24 @@ We frame the assessment of the dimensionality of child development as a model co
 
 ## Models
 
-Item response theory offers a suite of models with which to model item response data. We adopt the notation used in @chalmers2012mirt. Let $i = 1, \ldots, I$ represent the distinct children and $j = 1, \ldots, J$ the developmental milestones. The Kinedu item response data is stored in a matrix, $y$, where element $y_{ij}$ denotes if the $i$th child has or has not achieved the $j$th developmental milestone as reported by their parent/guardian. Each model represents the $i$th child's development using $m$ latent factors $\boldsymbol{\theta}_{i}=(\theta_1, \ldots, \theta_m)$. The $j$th milestone's discriminations (i.e. slopes) $\boldsymbol{a_j}=(a_1, \dots, a_m)$ capture the latent factor loadings onto that milestone.
+Item response theory offers a suite of models with which to model item response data. We adopt the notation used in @chalmers2012mirt. Let $i = 1, \ldots, I$ represent the distinct children and $j = 1, \ldots, J$ the developmental milestones. The Kinedu item response data is stored in a matrix, $y$, where element $y_{ij}$ denotes if the $i$th child has or has not achieved the $j$th developmental milestone as reported by their parent/guardian. Each model represents the $i$th child's development using $m$ latent factors $\boldsymbol{\theta}_{i}=(\theta_1, \dots, \theta_m)$. The $j$th milestone's discriminations (i.e. slopes) $\boldsymbol{a_j}=(a_1, \dots, a_m)$ capture the latent factor loadings onto that milestone.
 
-We fit four two-parametric logistic (2PL) models where a child’s development is represented by $m = 1, \ m = 2, \ m = 3,$ and $m = 4$ latent factors. According to the 2PL model, the probability of a child having achieved a developmental milestone is
+We fit four two-parametric logistic (2PL) models where a child’s development is represented by $m = 1, \ m = 2, \ m = 3,$ and $m = 4$ latent factors. Hereafter, we, for example, refer to a 2PL model with $m = 4$ latent factors as a 4F 2PL model. According to the 2PL model, the probability of a child having achieved a developmental milestone is
 $$
 P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbol{a}_{j}^{\top}\boldsymbol{\theta_i} + b_j)
 $$
-where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function.
+where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. We also fit a 1F Rasch model where each of the discriminations is fixed to 1.
 
 The 2PL models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table \ref{tab:examples}. For the bifactor model, the probability of a child having achieved a developmental milestone is 
 $$
 P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s + b_j).
 $$
 
-## Model comparison
+## Model comparison {#modelcompare}
 
 Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes or misspecification [@mcdonald1995goodness]. Instead, we prefer a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
 
-Mathematically and following notation similar to @vehtari2017practical, we partition the data into $K$ subsets $y^{(k)}$ for $k = 1, \ldots, K$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample) likelihood of $y^{(k)}$ is
+Mathematically and following notation similar to @vehtari2017practical, we partition the data into $K$ subsets $y^{(k)}$ for $k = 1, \dots, K$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample or cross-validated) likelihood of $y^{(k)}$ is
 
 $$
 p(y^{(k)} | y^{(-k)}) = \prod_{i \in i^{(k)}}^{I} \int_\theta \prod_{j=1}^{J} \hat{\text{Pr}}(y_{ij}^{(k)} | \Psi_j^{(-k)}, \theta) g(\theta)d\theta.
@@ -187,14 +193,54 @@ $$
 
 ## Results
 
+\myworries{fascinating that dropping 1 month olds}
+\myworries{changed the winner from 3F to 4F}
+
+Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which neccessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison](#modelcompare) section. The 4F 2PL model performs best which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
+
+\myworries{what else to add here?}
+
 Computing is done in R [@rcore], model fitting in the R package mirt [@chalmers2012mirt], and data wrangling/visualization in the set of R packages known as the tidyverse [@tidy].
+
+\myworries{Table \ref{tab:results} can be made clearer}
+
+```{r results}
+mirts <- read_rds(here::here("02_mirts.rds"))
+bifactor <- read_rds(here::here("02_bifactors.rds"))
+
+full <-
+    bind_rows(mirts, bifactor) %>%
+    rename(out_of_sample = ll_person_item) %>%
+    mutate(
+        in_sample = exp(log_lik / nrow(d_mat))^(1/ncol(d_mat))
+    ) %>%
+    mutate(
+        oos =
+            splits_with_log_lik %>% map_dbl(~ sum(.$log_lik_test))
+    ) %>%
+    select(
+        factors, itemtype, in_log_lik = log_lik, in_p = in_sample,
+        out_log_lik = oos, out_p = out_of_sample, model_full, fscores, splits_with_log_lik)
+
+full %>%
+    mutate(npars = model_full %>% map_int(~ .@Model$nestpars)) %>%
+    arrange(npars) %>%
+    mutate(model = c("1F Rasch", "1F 2PL", "2F 2PL", "Bifactor", "3F 2PL", "*4F 2PL*")) %>%
+    select(model, npars, in_log_lik, `lpl y (out-of-sample)` = out_log_lik) %>% 
+  knitr::kable("latex", caption = "Model performance: The 4F 2PL performs best") %>% 
+    kableExtra::kable_styling(font_size = 10, latex_options = "hold_position")
+```
 
 ## Understanding the latent factor structure
 
-To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor is mainly cognitive and linguistic. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly loads positively on linguistic milestones and negatively on physical milestones. 
+\myworries{section is written as if 3F is winner}
+\myworries{may need to edit to 4F}
+
+To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor load mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly load positively on linguistic milestones and, interestingly, negatively on physical milestones. 
 
 ```{r, include = FALSE}
 library(mirt)
+# TO DO: get mod3 directly from results - didn't need to fit again
 mod3 <- read_rds(here::here("scratch_mod3.rds"))
 mod3_summary <- summary(mod3, rotate = "varimax")
 ```
@@ -250,6 +296,44 @@ f %>%
         y = "Factor score"
     )
 ```
+
+# Dimensionality across the age-span
+
+For all of the data, we’ve shown evidence that 4-factors performs best. But is this latent factor dimensionality consistent across age-span? For example, perhaps for very young children 1-factor is sufficient and then later on 2- and then 3-factors become valuable. We take two approaches to assessing the dimensionality of child development across the age-span. First, we examine the performance of each of the models by age. Second, we partition the data by age and use the same cross-validation procedure to find the best fitting model in each partition.
+
+## Full model
+
+\myworries{figure currently shows up at end of paper}
+
+Figure \ref{fig:byage} shows ...
+
+```{r byage, fig.cap = 'More flexible models perform better at older ages'}
+read_rds(here::here("03_model_by_age.rds")) %>%
+    filter(model %in% c("2F 2PL", "4F 2PL", "Bifactor")) %>%
+    mutate(model = factor(model, levels = c("2F 2PL", "Bifactor", "4F 2PL"))) %>% 
+    select(model, oos) %>%
+    unnest(oos) %>%
+    mutate(oos = log(oos)) %>%
+    group_by(model, age) %>%
+    summarize(m = mean(oos)) %>%
+    ungroup() %>%
+    rename(Model = model) %>% 
+    ggplot(aes(x = age, y = m, color = Model)) +
+    geom_point(size = 0.75) +
+    geom_path(size = 0.35) +
+    labs(x = "Age (in months)", y = "Mean cross-validated log likelihood") +
+    theme_classic(base_size = 10) + 
+    theme(legend.position = "bottom", 
+            legend.title = element_text(size = 8),
+            legend.text = element_text(size = 8),
+            legend.key.size = unit(0.3, "cm"))
+```
+
+## Age-partitioned models
+
+# Discussion
+
+\myworries{to do}
 
 # Acknowledgements
 

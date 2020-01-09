@@ -4,6 +4,7 @@ output: github_document
 ---
 
 ```{r setup, include=FALSE}
+set.seed(123)
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(mirt)
@@ -43,7 +44,8 @@ mirts <-
         "1",      "2PL",
         "2",      "2PL",
         "3",      "2PL",
-        "4",      "2PL"    
+        "4",      "2PL",
+        "5",      "2PL"
   ) %>% 
     mutate(
         model_full =
@@ -55,7 +57,7 @@ mirts <-
                     .x, 
                     .y,
                     method = "EM", # might edit!
-                    technical = list(NCYCLES = 200) # crank
+                    technical = list(NCYCLES = 400) # crank
                 )
             ),
         log_lik = map_dbl(model_full, logLik),
@@ -69,7 +71,7 @@ mirts <-
                 itemtype, 
                 factors_itemtype_splits_df_to_splits_with_log_lik, 
                 splits_d_mat,
-                n_cycles = 200, # crank
+                n_cycles = 400, # crank
                 verbose = TRUE,
                 the_method = "EM"
       )
@@ -81,7 +83,7 @@ mirts <-
         ll_person_item = ll_person ^ (1 / ncol(d_mat))
   )
 
-mirts %>% write_rds("02_mirts.rds")
+mirts %>% write_rds("02_mirts_2_add_5.rds")
 ```
 
 # bifactors
@@ -96,7 +98,7 @@ bifactors <-
         model_full =
             map(
                 map(factors, bifactor_to_specific),
-                ~ bfactor(d_mat, ., technical = list(NCYCLES = 200)) # crank
+                ~ bfactor(d_mat, ., technical = list(NCYCLES = 400)) # crank
             ),
         log_lik = map_dbl(model_full, logLik),
         n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
@@ -108,7 +110,7 @@ bifactors <-
                 factors, 
                 BBBfactors_splits_df_to_splits_with_log_lik, 
                 splits_d_mat,
-                n_cycles = 200, # crank
+                n_cycles = 400, # crank
                 verbose = FALSE
             )
   ) %>% 
@@ -119,5 +121,5 @@ bifactors <-
         ll_person_item = ll_person ^ (1 / ncol(d_mat))
   )
 
-bifactors %>% write_rds("02_bifactors.rds")
+bifactors %>% write_rds("02_bifactors_2.rds")
 ```

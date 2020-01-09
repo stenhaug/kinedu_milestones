@@ -1,0 +1,83 @@
+---
+title: "Untitled"
+output: html_document
+---
+
+this code adapted from archived > 12_by_age.Rmd
+
+```{r}
+library(tidyverse)
+library(mirt)
+library(rsample)
+
+d <- read_rds("data-clean/d.rds")
+d_mat <- read_rds("data-clean/d_mat.rds")
+mirts <- read_rds("02_mirts.rds")
+bifactor <- read_rds("02_bifactors.rds")
+
+R.utils::sourceDirectory("~/Google_Drive/5_Projects/irt_comparison_folders/irt_comparison3/R")
+```
+
+tidy up models
+
+```{r}
+models <-
+    bind_rows(mirts, bifactor) %>%
+    rename(out_of_sample = ll_person_item) %>%
+    mutate(
+        in_sample = exp(log_lik / nrow(d_mat))^(1/ncol(d_mat))
+    )
+
+models <-
+    models %>%
+    mutate(
+        oos =
+            splits_with_log_lik %>% map_dbl(~ sum(.$log_lik_test))
+    ) %>%
+    select(factors, itemtype, in_log_lik = log_lik, in_p = in_sample, out_log_lik = oos, out_p = out_of_sample, model_full, fscores, splits_with_log_lik)
+```
+
+create model by age
+
+```{r}
+split_model_to_oos <- function(split, model){
+    tibble(
+        id = row.names(testing(split)),
+        oos = calc_log_lik_ghq2_student(model, testing(split))
+    )
+}
+
+splits_with_ll_to_oos <- function(splits_with_log_lik) {
+    splits_with_log_lik %>%
+        mutate(
+            oos = map2(splits, model, split_model_to_oos)
+        ) %>%
+        pull(oos) %>%
+        bind_rows() %>%
+        left_join(
+            d %>%
+                group_by(id) %>%
+                summarize(age = age[1])
+        )
+}
+
+model_by_age <-
+    models %>%
+    select(factors, itemtype, splits_with_log_lik) %>%
+    mutate(oos = splits_with_log_lik %>% map(splits_with_ll_to_oos)) %>%
+    mutate(
+        model = c("1F Rasch", "1F 2PL", "2F 2PL", "3F 2PL", "4F 2PL", "Bifactor")
+    )
+```
+
+output
+
+```{r}
+model_by_age %>% 
+    select(model, oos) %>% 
+    write_rds("03_model_by_age.rds")
+```
+
+
+
+

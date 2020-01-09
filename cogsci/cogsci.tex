@@ -54,7 +54,10 @@
 
 \title{The latent factor structure of child development}
 
+\usepackage{amsmath}
 \usepackage{bm}
+\usepackage{xcolor}
+\newcommand\myworries[1]{\textcolor{red}{#1}}
 \usepackage{booktabs}
 \usepackage{longtable}
 \usepackage{array}
@@ -77,16 +80,16 @@
 \maketitle
 
 \begin{abstract}
-Hello
+TO DO
 
 \textbf{Keywords:}
-one; two;
+child development; milestones; IRT; cross-validation;
 \end{abstract}
 
 \hypertarget{introduction}{%
 \section{Introduction}\label{introduction}}
 
-TO DO
+\textcolor{red}{to do}
 
 \hypertarget{data}{%
 \section{Data}\label{data}}
@@ -141,6 +144,9 @@ children have reached about 300 developmental milestones. Finally, at 48
 months old, most children have reached about 375 of the 414
 developmental milestones.
 
+\textcolor{red}{probably should describe where}
+\textcolor{red}{the percentile curves come from}
+
 \begin{CodeChunk}
 \begin{figure}[tb]
 \includegraphics{figs/growth-1} \caption[Number of milestones by age]{Number of milestones by age}\label{fig:growth}
@@ -165,18 +171,22 @@ response data is stored in a matrix, \(y\), where element \(y_{ij}\)
 denotes if the \(i\)th child has or has not achieved the \(j\)th
 developmental milestone as reported by their parent/guardian. Each model
 represents the \(i\)th child's development using \(m\) latent factors
-\(\boldsymbol{\theta}_{i}=(\theta_1, \ldots, \theta_m)\). The \(j\)th
+\(\boldsymbol{\theta}_{i}=(\theta_1, \dots, \theta_m)\). The \(j\)th
 milestone's discriminations (i.e.~slopes)
 \(\boldsymbol{a_j}=(a_1, \dots, a_m)\) capture the latent factor
 loadings onto that milestone.
 
 We fit four two-parametric logistic (2PL) models where a child's
 development is represented by \(m = 1, \ m = 2, \ m = 3,\) and \(m = 4\)
-latent factors. According to the 2PL model, the probability of a child
-having achieved a developmental milestone is \[
+latent factors. Hereafter, we, for example, refer to a 2PL model with
+\(m = 4\) latent factors as a 4F 2PL model. According to the 2PL model,
+the probability of a child having achieved a developmental milestone is
+\[
 P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbol{a}_{j}^{\top}\boldsymbol{\theta_i} + b_j)
 \] where \(b_j\) is the milestone easiness (i.e.~intercept) and
 \(\sigma(x) = \frac{e^x}{e^x + 1}\) is the standard logistic function.
+We also fit a 1F Rasch model where each of the discriminations is fixed
+to 1.
 
 The 2PL models learn the latent factor structure entirely from the data,
 making them exploratory. The bifactor model offers an alternative
@@ -191,8 +201,8 @@ probability of a child having achieved a developmental milestone is \[
 P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s + b_j).
 \]
 
-\hypertarget{model-comparison}{%
-\subsection{Model comparison}\label{model-comparison}}
+\hypertarget{modelcompare}{%
+\subsection{Model comparison}\label{modelcompare}}
 
 Model comparison in IRT typically uses information criterion such as AIC
 and BIC (Maydeu-Olivares, 2013). However, these methods are not
@@ -205,10 +215,10 @@ calculate the likelihood of that fold by integrating over \(g(\theta)\).
 
 Mathematically and following notation similar to Vehtari, Gelman, \&
 Gabry (2017), we partition the data into \(K\) subsets \(y^{(k)}\) for
-\(k = 1, \ldots, K\). Each model is fit separately to each training set
+\(k = 1, \dots, K\). Each model is fit separately to each training set
 \(y^{(-k)}\) yielding item parameter estimates which we compactly denote
-\(\Psi_j^{(-k)}\). The predictive (i.e.~out-of-sample) likelihood of
-\(y^{(k)}\) is
+\(\Psi_j^{(-k)}\). The predictive (i.e.~out-of-sample or
+cross-validated) likelihood of \(y^{(k)}\) is
 
 \[
 p(y^{(k)} | y^{(-k)}) = \prod_{i \in i^{(k)}}^{I} \int_\theta \prod_{j=1}^{J} \hat{\text{Pr}}(y_{ij}^{(k)} | \Psi_j^{(-k)}, \theta) g(\theta)d\theta.
@@ -224,14 +234,58 @@ likelihood for the entire item response matrix, which is defined as
 \hypertarget{results}{%
 \subsection{Results}\label{results}}
 
+\textcolor{red}{fascinating that dropping 1 month olds}
+\textcolor{red}{changed the winner from 3F to 4F}
+
+Table \ref{tab:results} shows the number of parameters, the in-sample
+log likelihood (which neccessarily increases with more parameters), and
+the \(\text{lpl } y\) defined in the
+\protect\hyperlink{modelcompare}{model comparison} section. The 4F 2PL
+model performs best which is evidence that child development between the
+ages of 2 and 55 months follows a multidimensional path.
+
+\textcolor{red}{what else to add here?}
+
 Computing is done in R (R Core Team, 2019), model fitting in the R
 package mirt (Chalmers \& others, 2012), and data
 wrangling/visualization in the set of R packages known as the tidyverse
 (Wickham, 2017).
 
+\textcolor{red}{Table \ref{tab:results} can be made clearer}
+
+\begin{CodeChunk}
+\begin{table}[!h]
+
+\caption{\label{tab:results}Model performance: The 4F 2PL performs best}
+\centering
+\fontsize{10}{12}\selectfont
+\begin{tabular}[t]{l|r|r|r}
+\hline
+model & npars & in\_log\_lik & lpl y (out-of-sample)\\
+\hline
+1F Rasch & 415 & -254983.9 & -255443.5\\
+\hline
+1F 2PL & 828 & -222073.0 & -223072.0\\
+\hline
+2F 2PL & 1241 & -212957.9 & -214498.2\\
+\hline
+Bifactor & 1242 & -210030.2 & -211682.2\\
+\hline
+3F 2PL & 1653 & -208887.6 & -210943.4\\
+\hline
+*4F 2PL* & 2064 & -208124.1 & -210793.5\\
+\hline
+\end{tabular}
+\end{table}
+
+\end{CodeChunk}
+
 \hypertarget{understanding-the-latent-factor-structure}{%
 \subsection{Understanding the latent factor
 structure}\label{understanding-the-latent-factor-structure}}
+
+\textcolor{red}{section is written as if 3F is winner}
+\textcolor{red}{may need to edit to 4F}
 
 To understand each of the three factors in the best performing model, we
 fit the model to the the full dataset. We then estimate the factor
@@ -239,11 +293,11 @@ loadings (i.e.~discriminations or slopes) using a varimax rotation. The
 varimax rotation results in orthogonal and, therefore, more
 interpretable factors (Kaiser, 1959). Figure \ref{fig:factorloadings}
 shows the distribution of factor loadings for each group on each of the
-three factors. The first factor is mainly cognitive and linguistic. The
-second factor is a combination of each of the groups with the strongest
-loadings on the physical and social \& emotional milestones. The third
-mainly loads positively on linguistic milestones and negatively on
-physical milestones.
+three factors. The first factor load mainly on cognitive and linguistic
+milestones. The second factor is a combination of each of the groups
+with the strongest loadings on the physical and social \& emotional
+milestones. The third mainly load positively on linguistic milestones
+and, interestingly, negatively on physical milestones.
 
 \begin{CodeChunk}
 \begin{figure}[tb]
@@ -265,6 +319,41 @@ factor does not have any association with age.
 \includegraphics{figs/factorscores-1} \caption[The first factor is highly associated with age]{The first factor is highly associated with age}\label{fig:factorscores}
 \end{figure}
 \end{CodeChunk}
+
+\hypertarget{dimensionality-across-the-age-span}{%
+\section{Dimensionality across the
+age-span}\label{dimensionality-across-the-age-span}}
+
+For all of the data, we've shown evidence that 4-factors performs best.
+But is this latent factor dimensionality consistent across age-span? For
+example, perhaps for very young children 1-factor is sufficient and then
+later on 2- and then 3-factors become valuable. We take two approaches
+to assessing the dimensionality of child development across the
+age-span. First, we examine the performance of each of the models by
+age. Second, we partition the data by age and use the same
+cross-validation procedure to find the best fitting model in each
+partition.
+
+\hypertarget{full-model}{%
+\subsection{Full model}\label{full-model}}
+
+\textcolor{red}{figure currently shows up at end of paper}
+
+Figure \ref{fig:byage} shows \ldots{}
+
+\begin{CodeChunk}
+\begin{figure}[tb]
+\includegraphics{figs/byage-1} \caption[More flexible models perform better at older ages]{More flexible models perform better at older ages}\label{fig:byage}
+\end{figure}
+\end{CodeChunk}
+
+\hypertarget{age-partitioned-models}{%
+\subsection{Age-partitioned models}\label{age-partitioned-models}}
+
+\hypertarget{discussion}{%
+\section{Discussion}\label{discussion}}
+
+\textcolor{red}{to do}
 
 \hypertarget{acknowledgements}{%
 \section{Acknowledgements}\label{acknowledgements}}

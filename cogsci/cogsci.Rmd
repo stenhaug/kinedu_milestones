@@ -74,7 +74,19 @@ ms <- milestones %>% mutate(code = str_remove(code, " "))
 
 # Introduction
 
-\myworries{to do}
+How do young children grow and change? Is child development a single unified process or a host of different processes, each with their own constraints and timescale? Piaget famously proposed a stage theory in which many seemingly distinct mental processes developed in concert through the operation of the same principles across distinct domains [@flavell1963developmental]. In contrast, modern theories propose that different facets of children's mental life develop on their own timetable [@gelman1983preschoolers]. And the grandmother of one author of this paper was known to assert that developmental milestones were in compensatory relationships with one another ("children either walk early or else they talk early"). 
+
+This question is important not only from a theoretical perspective but also for application. The process of assessing children's developmental status critically depends on our assumptions about the nature of that status — in particular, whether there is a single unified process that can be measured via some score derived from subprocesses. In this sense, questions about the nature and structure of development are psychometric questions [@borsboom2005measuring]. Such psychometric analysis investigating the dimensionality of change has been studied extensively in the case of cognitive aging [e.g., @balinsky1941analysis; @li1999test] but has received less attention in early childhood.
+
+Our goal is to describe the psychometric structure of development. We take as our starting point the idea that psychometric models can instantiate hypotheses about psychological structure in ways that can be assessed via their fit to data. We adopt the framework of item response theory (IRT). IRT models allow us to capture how responses to such questions track both with individual children's abilities as well as with the measurement properties of the questions (and underlying milestones). In particular, our interest is in comparing within a family of multidimensional IRT models in order to gain insight into the underlying dimensionality of early childhood development. 
+
+In a standard factor-analytic approach (which multi-dimensional IRT extends), a solution with N factors partitions observed variance into factors, suggesting dimensions of variation in the sample. One substantial complication to this perspective for analyzing developmental data is the issue that the dimensionality of children's variation could itself change developmentally. Indeed, the dedifferentiation hypothesis of cognitive aging — that distinct factors collapse is such a hypothesis. To address this challenge, we use a new set of cross-validation methods to investigate changes in dimensionality. 
+
+We use milestone data for our investigation. Global assessment of developmental status via a series of binary questions (e.g., "Can your child walk at least ten steps unassisted?") is both a standard feature of pediatrician visits [@sheldrick2019establishing] and a gold standard for child development in the research and intervention communities [@bayley2009bayley; @bricker1999ages; @dscore; @mccoy2019preschool]. In such assessments, which are typically but not always conducted via parent report, developmental progress is pooled across domains like motor development or language. Thus, these instruments implicitly assume a unifactorial model, although some also provide subscale scores [@bayley2009bayley].
+
+Unfortunately, these instruments are commercial products, and hence normative data at the item level are typically not available for analysis. In the current paper, we thus analyze a new set of data from a set of 414 milestone questions administered online to a group of 1946 middle-class Mexican parents of children from 0 to 55 months of age. This very comprehensive milestone set allows us to ask questions about how variation in developmental growth can be partitioned across age and face-valid domains (language, cognition, motor, and socio-emotional development).
+
+We first describe our dataset. We then introduce our model family specification and evaluation measures. We consider the overall dimensionality of our dataset and then turn to the evidence for change in dimensionality across development. We end by considering the limitations and implications of this work.
 
 # Data
 
@@ -162,18 +174,78 @@ We frame the assessment of the dimensionality of child development as a model co
 
 ## Models
 
-Item response theory offers a suite of models with which to model item response data. We adopt the notation used in @chalmers2012mirt. Let $i = 1, \ldots, I$ represent the distinct children and $j = 1, \ldots, J$ the developmental milestones. The Kinedu item response data is stored in a matrix, $y$, where element $y_{ij}$ denotes if the $i$th child has or has not achieved the $j$th developmental milestone as reported by their parent/guardian. Each model represents the $i$th child's development using $m$ latent factors $\boldsymbol{\theta}_{i}=(\theta_1, \dots, \theta_m)$. The $j$th milestone's discriminations (i.e. slopes) $\boldsymbol{a_j}=(a_1, \dots, a_m)$ capture the latent factor loadings onto that milestone.
+Item response theory offers a suite of models with which to model item response data. We adopt the notation used in @chalmers2012mirt. Let $i = 1, \ldots, I$ represent the distinct children and $j = 1, \ldots, J$ the developmental milestones. The Kinedu item response data is stored in a matrix, $y$, where element $y_{ij}$ denotes if the $i$th child has or has not achieved the $j$th developmental milestone as reported by their parent/guardian. Each model represents the $i$th child's development using $m$ latent factors $\boldsymbol{\theta}_{i}=(\theta_1, \dots, \theta_m)$. The $j$th milestone's discriminations (i.e. slopes) $\boldsymbol{a_j}=(a_1, \dots, a_m)$ capture the latent factor loadings onto that milestone. 
 
 We fit four two-parametric logistic (2PL) models where a child’s development is represented by $m = 1, \ m = 2, \ m = 3,$ and $m = 4$ latent factors. Hereafter, we, for example, refer to a 2PL model with $m = 4$ latent factors as a 4F 2PL model. According to the 2PL model, the probability of a child having achieved a developmental milestone is
 $$
 P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbol{a}_{j}^{\top}\boldsymbol{\theta_i} + b_j)
 $$
-where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. We also fit a 1F Rasch model where each of the discriminations is fixed to 1.
+where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. We also fit a 1F Rasch model where each of the discriminations is fixed to 1. As an example, Figure \ref{fig:icc} shows item characteristic curves from 1F 2PL model for the items in Table \ref{tab:examples}. Most children babbling and babbling is unrelated with development. On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
 
 The 2PL models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table \ref{tab:examples}. For the bifactor model, the probability of a child having achieved a developmental milestone is 
 $$
 P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s + b_j).
 $$
+
+```{r icc, fig.cap = 'Example item characteristic curves'}
+library(mirt)
+mirts <- read_rds(here::here("02_mirts.rds"))
+
+mod <- mirts$model_full[[2]]
+
+traceline <- NULL
+
+a <- which("abs_183" == colnames(d_mat))
+b <- which("babbling_23" == colnames(d_mat))
+c <- which("balance_708" == colnames(d_mat))
+d <- which("dindep_78" == colnames(d_mat))
+
+num <- 1
+for(i in c(a, b, c, d)){
+  extr.2 <- extract.item(mod, i)
+  Theta <- matrix(seq(-4,4, by = .1))
+  traceline[[num]] <- probtrace(extr.2, Theta)
+  num = num + 1
+}
+
+# rename list
+names(traceline) <- 
+  c(
+    "Finds objects on the floor", 
+    "Babbles to imitate conversations", 
+    "Stands on their toes", 
+    "Complains when play is interrupted"
+  )
+
+# rbind traceline
+traceline.df <- do.call(rbind, traceline)
+
+# create item names length based on length of theta provided
+item <- rep(names(traceline),each=length(Theta))
+
+# put them all together into a dataframe
+l.format <- cbind.data.frame(Theta, item, traceline.df)
+
+l.format$item<-as.factor(l.format$item)
+aux<-l.format %>%
+  group_by(item) %>%
+  slice(which.min(abs(P.1-0.5))) # We are only using the P.1 column (dichotomous)
+
+aux<-aux[order(aux$Theta),]
+ord<-as.integer(aux$item)
+l.format$item = factor(l.format$item,levels(l.format$item)[ord])
+
+# plot chart
+l.format %>% 
+  as_tibble() %>% 
+  ggplot(aes(Theta, P.1)) + 
+  geom_line() + 
+  facet_wrap(~ item) +
+  xlab(expression(theta)) + 
+  ylab("Probability of milestone") + 
+  theme_classic(base_size = 6)
+```
+
 
 ## Model comparison {#modelcompare}
 
@@ -210,7 +282,6 @@ Computing is done in R [@rcore], model fitting in the R package mirt [@chalmers2
 # will need latek in kables:
 # https://stackoverflow.com/questions/49416492/latex-formulas-or-symbols-in-table-cells-using-knitr-and-kableextra-in-r-markdow
 
-mirts <- read_rds(here::here("02_mirts.rds"))
 bifactor <- read_rds(here::here("02_bifactors.rds"))
 
 full <-
@@ -244,7 +315,6 @@ full %>%
 To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor load mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly load positively on linguistic milestones and, interestingly, negatively on physical milestones. 
 
 ```{r, include = FALSE}
-library(mirt)
 # TO DO: get mod3 directly from results - didn't need to fit again
 mod3 <- read_rds(here::here("scratch_mod3.rds"))
 mod3_summary <- summary(mod3, rotate = "varimax")
@@ -267,8 +337,7 @@ mod3_summary_with_areas %>%
     facet_wrap(~ var, ncol = 1) +
     labs(
         x = "Factor loading (i.e. discrimination or slope)",
-        y = "Density",
-        title = "Milestone loadings by factor"
+        y = "Density"
     ) +
     theme_classic(base_size = 8) + 
     theme(legend.position = "bottom", 
@@ -314,9 +383,9 @@ For all of the data, we’ve shown evidence that 4-factors performs best. But is
 
 Figure \ref{fig:byage} displays the mean cross-validated log likelihood for each model by age, which comes from the k-fold cross-validation described in the [model comparison](#modelcompare) section. For each student, we calculate the marginalized out-of-sample likelihood based on the item parameters $\Psi_j^{(-k)}$ from fitting the model to $y^{(-k)}$, the folds of data that does not include the student. As a reminder, students are assigned to folds randomly and not by age. 
 
-Figure \ref{fig:byage} shows that cross-validated log likelihood is highest for very young (less than 8 months old) and older (greater than 48 months old) children. This is not surprising as the number of milestones for each of these age groups is relatively close to 0% and 100% respectively. More importantly, we see that the 2F 2PL model performs best for children two to six months old. The 2F 2PL model performs as well as the 4F 2PL model for children from six months old to 11 months old. For children older than 11 months old, the 4F 2PL model tends to perform best. Interestingly, the bifactor model performs more similarly across the age-span to the 4F 2PL than the 2F 2PL despite having a similar number of parameters to the 2F 2PL. 
+Figure \ref{fig:byage} shows how both the 4F 2PL and bifactor models compare to the 2F 2PL model in terms of cross-validated log likelihood for each age. The 2F 2PL outperforms both models for children younger than 7 months old. For children older than 11 months old both the 4F 2PL and bifactor models outperform the 2F 2PL model with the 4F 2PL model tending to perform best. Interestingly, the bifactor model performs more similarly across the age-span to the 4F 2PL than the 2F 2PL despite having a similar number of parameters to the 2F 2PL. 
 
-```{r byage, fig.cap = 'More flexible models perform better at older ages'}
+```{r byage, fig.cap = 'Comparing the 4F 2PL and Bifactor models to the 2F 2PL'}
 read_rds(here::here("03_model_by_age.rds")) %>%
     filter(model %in% c("2F 2PL", "4F 2PL", "Bifactor")) %>%
     mutate(model = factor(model, levels = c("2F 2PL", "Bifactor", "4F 2PL"))) %>% 
@@ -326,11 +395,15 @@ read_rds(here::here("03_model_by_age.rds")) %>%
     group_by(model, age) %>%
     summarize(m = mean(oos)) %>%
     ungroup() %>%
-    rename(Model = model) %>% 
+    spread(model, m) %>% 
+    mutate(`4F 2PL` = `4F 2PL` - `2F 2PL`, Bifactor = Bifactor - `2F 2PL`) %>% 
+    select(-`2F 2PL`) %>% 
+    gather(Model, m, -age) %>% 
     ggplot(aes(x = age, y = m, color = Model)) +
     geom_point(size = 0.75) +
     geom_path(size = 0.35) +
-    labs(x = "Age (in months)", y = "Mean cross-validated log likelihood") +
+    geom_hline(yintercept = 0, linetype = "dashed") +
+    labs(x = "Age (in months)", y = "Mean difference in log likelihood") +
     theme_classic(base_size = 10) + 
     theme(legend.position = "bottom", 
             legend.title = element_text(size = 8),

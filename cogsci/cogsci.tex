@@ -89,7 +89,77 @@ child development; milestones; item response theory; model comparison
 \hypertarget{introduction}{%
 \section{Introduction}\label{introduction}}
 
-\textcolor{red}{to do}
+How do young children grow and change? Is child development a single
+unified process or a host of different processes, each with their own
+constraints and timescale? Piaget famously proposed a stage theory in
+which many seemingly distinct mental processes developed in concert
+through the operation of the same principles across distinct domains
+(Flavell, 1963). In contrast, modern theories propose that different
+facets of children's mental life develop on their own timetable (Gelman
+\& Meck, 1983). And the grandmother of one author of this paper was
+known to assert that developmental milestones were in compensatory
+relationships with one another (``children either walk early or else
+they talk early'').
+
+This question is important not only from a theoretical perspective but
+also for application. The process of assessing children's developmental
+status critically depends on our assumptions about the nature of that
+status --- in particular, whether there is a single unified process that
+can be measured via some score derived from subprocesses. In this sense,
+questions about the nature and structure of development are psychometric
+questions (Borsboom, 2005). Such psychometric analysis investigating the
+dimensionality of change has been studied extensively in the case of
+cognitive aging (e.g., Balinsky, 1941; Li, Nuttall, \& Zhao, 1999) but
+has received less attention in early childhood.
+
+Our goal is to describe the psychometric structure of development. We
+take as our starting point the idea that psychometric models can
+instantiate hypotheses about psychological structure in ways that can be
+assessed via their fit to data. We adopt the framework of item response
+theory (IRT). IRT models allow us to capture how responses to such
+questions track both with individual children's abilities as well as
+with the measurement properties of the questions (and underlying
+milestones). In particular, our interest is in comparing within a family
+of multidimensional IRT models in order to gain insight into the
+underlying dimensionality of early childhood development.
+
+In a standard factor-analytic approach (which multi-dimensional IRT
+extends), a solution with N factors partitions observed variance into
+factors, suggesting dimensions of variation in the sample. One
+substantial complication to this perspective for analyzing developmental
+data is the issue that the dimensionality of children's variation could
+itself change developmentally. Indeed, the dedifferentiation hypothesis
+of cognitive aging --- that distinct factors collapse is such a
+hypothesis. To address this challenge, we use a new set of
+cross-validation methods to investigate changes in dimensionality.
+
+We use milestone data for our investigation. Global assessment of
+developmental status via a series of binary questions (e.g., ``Can your
+child walk at least ten steps unassisted?'') is both a standard feature
+of pediatrician visits (Sheldrick et al., 2019) and a gold standard for
+child development in the research and intervention communities
+({\textbf{???}}; Bayley, 2009; Bricker et al., 1999; McCoy, Gonzalez, \&
+Jones, 2019). In such assessments, which are typically but not always
+conducted via parent report, developmental progress is pooled across
+domains like motor development or language. Thus, these instruments
+implicitly assume a unifactorial model, although some also provide
+subscale scores (Bayley, 2009).
+
+Unfortunately, these instruments are commercial products, and hence
+normative data at the item level are typically not available for
+analysis. In the current paper, we thus analyze a new set of data from a
+set of 414 milestone questions administered online to a group of 1946
+middle-class Mexican parents of children from 0 to 55 months of age.
+This very comprehensive milestone set allows us to ask questions about
+how variation in developmental growth can be partitioned across age and
+face-valid domains (language, cognition, motor, and socio-emotional
+development).
+
+We first describe our dataset. We then introduce our model family
+specification and evaluation measures. We consider the overall
+dimensionality of our dataset and then turn to the evidence for change
+in dimensionality across development. We end by considering the
+limitations and implications of this work.
 
 \hypertarget{data}{%
 \section{Data}\label{data}}
@@ -186,7 +256,12 @@ P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbo
 \] where \(b_j\) is the milestone easiness (i.e.~intercept) and
 \(\sigma(x) = \frac{e^x}{e^x + 1}\) is the standard logistic function.
 We also fit a 1F Rasch model where each of the discriminations is fixed
-to 1.
+to 1. As an example, Figure \ref{fig:icc} shows item characteristic
+curves from 1F 2PL model for the items in Table \ref{tab:examples}. Most
+children babbling and babbling is unrelated with development. On the
+other hand, finding objects on the floor is highly related to
+development with most children with \(\theta_i\) greater than -1.5
+having reached this milestone.
 
 The 2PL models learn the latent factor structure entirely from the data,
 making them exploratory. The bifactor model offers an alternative
@@ -200,6 +275,12 @@ groups shown in Table \ref{tab:examples}. For the bifactor model, the
 probability of a child having achieved a developmental milestone is \[
 P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s + b_j).
 \]
+
+\begin{CodeChunk}
+\begin{figure}[tb]
+\includegraphics{figs/icc-1} \caption[Example item characteristic curves]{Example item characteristic curves}\label{fig:icc}
+\end{figure}
+\end{CodeChunk}
 
 \hypertarget{modelcompare}{%
 \subsection{Model comparison}\label{modelcompare}}
@@ -352,21 +433,18 @@ the model to \(y^{(-k)}\), the folds of data that does not include the
 student. As a reminder, students are assigned to folds randomly and not
 by age.
 
-Figure \ref{fig:byage} shows that cross-validated log likelihood is
-highest for very young (less than 8 months old) and older (greater than
-48 months old) children. This is not surprising as the number of
-milestones for each of these age groups is relatively close to 0\% and
-100\% respectively. More importantly, we see that the 2F 2PL model
-performs best for children two to six months old. The 2F 2PL model
-performs as well as the 4F 2PL model for children from six months old to
-11 months old. For children older than 11 months old, the 4F 2PL model
-tends to perform best. Interestingly, the bifactor model performs more
+Figure \ref{fig:byage} shows how both the 4F 2PL and bifactor models
+compare to the 2F 2PL model in terms of cross-validated log likelihood
+for each age. The 2F 2PL outperforms both models for children younger
+than 7 months old. For children older than 11 months old both the 4F 2PL
+and bifactor models outperform the 2F 2PL model with the 4F 2PL model
+tending to perform best. Interestingly, the bifactor model performs more
 similarly across the age-span to the 4F 2PL than the 2F 2PL despite
 having a similar number of parameters to the 2F 2PL.
 
 \begin{CodeChunk}
 \begin{figure}[tb]
-\includegraphics{figs/byage-1} \caption[More flexible models perform better at older ages]{More flexible models perform better at older ages}\label{fig:byage}
+\includegraphics{figs/byage-1} \caption[Comparing the 4F 2PL and Bifactor models to the 2F 2PL]{Comparing the 4F 2PL and Bifactor models to the 2F 2PL}\label{fig:byage}
 \end{figure}
 \end{CodeChunk}
 
@@ -425,6 +503,23 @@ possible.
 \noindent
 
 \hypertarget{refs}{}
+\leavevmode\hypertarget{ref-balinsky1941analysis}{}%
+Balinsky, B. (1941). An analysis of the mental factors of various age
+groups from nine to sixty. \emph{Genetic Psychology Monographs}.
+
+\leavevmode\hypertarget{ref-bayley2009bayley}{}%
+Bayley, N. (2009). \emph{Bayley-iii: Bayley scales of infant and toddler
+development}. Giunti OS.
+
+\leavevmode\hypertarget{ref-borsboom2005measuring}{}%
+Borsboom, D. (2005). \emph{Measuring the mind: Conceptual issues in
+contemporary psychometrics}. Cambridge University Press.
+
+\leavevmode\hypertarget{ref-bricker1999ages}{}%
+Bricker, D., Squires, J., Mounts, L., Potter, L., Nickel, R., Twombly,
+E., \& Farrell, J. (1999). Ages and stages questionnaire. \emph{Paul H.
+Brookes: Baltimore}.
+
 \leavevmode\hypertarget{ref-cai2011generalized}{}%
 Cai, L., Yang, J. S., \& Hansen, M. (2011). Generalized full-information
 item bifactor analysis. \emph{Psychological Methods}, \emph{16}(3), 221.
@@ -438,15 +533,33 @@ Statistical Software}, \emph{48}(6), 1--29.
 Embretson, S. E., \& Reise, S. P. (2013). \emph{Item response theory}.
 Psychology Press.
 
+\leavevmode\hypertarget{ref-flavell1963developmental}{}%
+Flavell, J. H. (1963). The developmental psychology of jean piaget.
+
+\leavevmode\hypertarget{ref-gelman1983preschoolers}{}%
+Gelman, R., \& Meck, E. (1983). Preschoolers' counting: Principles
+before skill. \emph{Cognition}, \emph{13}(3), 343--359.
+
 \leavevmode\hypertarget{ref-kaiser1959computer}{}%
 Kaiser, H. F. (1959). Computer program for varimax rotation in factor
 analysis. \emph{Educational and Psychological Measurement},
 \emph{19}(3), 413--420.
 
+\leavevmode\hypertarget{ref-li1999test}{}%
+Li, C., Nuttall, R. L., \& Zhao, S. (1999). A test of the piagetian
+water-level task with chinese students. \emph{The Journal of Genetic
+Psychology}, \emph{160}(3), 369--380.
+
 \leavevmode\hypertarget{ref-maydeu2013goodness}{}%
 Maydeu-Olivares, A. (2013). Goodness-of-fit assessment of item response
 theory models. \emph{Measurement: Interdisciplinary Research and
 Perspectives}, \emph{11}(3), 71--101.
+
+\leavevmode\hypertarget{ref-mccoy2019preschool}{}%
+McCoy, D. C., Gonzalez, K., \& Jones, S. (2019). Preschool
+self-regulation and preacademic skills as mediators of the long-term
+impacts of an early intervention. \emph{Child Development},
+\emph{90}(5), 1544--1558.
 
 \leavevmode\hypertarget{ref-mcdonald1995goodness}{}%
 McDonald, R. P., \& Mok, M. M.-C. (1995). Goodness of fit in item
@@ -457,6 +570,11 @@ response models. \emph{Multivariate Behavioral Research}, \emph{30}(1),
 R Core Team. (2019). \emph{R: A language and environment for statistical
 computing}. Vienna, Austria: R Foundation for Statistical Computing.
 Retrieved from \url{https://www.R-project.org/}
+
+\leavevmode\hypertarget{ref-sheldrick2019establishing}{}%
+Sheldrick, R. C., Schlichting, L. E., Berger, B., Clyne, A., Ni, P.,
+Perrin, E. C., \& Vivier, P. M. (2019). Establishing new norms for
+developmental milestones. \emph{Pediatrics}, \emph{144}(6).
 
 \leavevmode\hypertarget{ref-vehtari2017practical}{}%
 Vehtari, A., Gelman, A., \& Gabry, J. (2017). Practical bayesian model

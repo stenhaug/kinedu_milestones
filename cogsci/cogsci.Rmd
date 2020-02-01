@@ -1,5 +1,5 @@
 ---
-title: "The latent factor structure of child development"
+title: "The latent factor structure of developmental change in early childhood"
 bibliography: cogsci_ref.bib
 csl: apa6.csl
 document-params: "10pt, letterpaper"
@@ -8,7 +8,7 @@ author-information: >
     \author{Anonymous Cogsci Submission}
 
 abstract: >
-    Piaget famously proposed a stage theory of child development. More recently, researchers have proposed more modern theories of child development. Despite the abundance of theory, there is little empirical work on the dimensionality of child development. We investigate the dimensionality of child development by comparing a variety of item response models fit to data from a Mexico-based child development app, Kinedu. We find evidence that child development from 0 - 55 months of age has three dimensions. We also find evidence that dimensionality increases across the age-span. These results suggest the value of more precise measures of child development, which we hope will both enrichen our understanding of developmental processes and provide the groundwork for improved interventions for developmental delay.
+    Piaget proposed that development proceeded in stages; more recently researchers have proposed modular theories in which different abilities develop on their own timetable. Despite the abundance of theory, there is little empirical work on the structure of developmental changes in early childhood. We investigate this question using a large dataset of parent-reported developmental milestones. We compare a variety of factor-analytic item response theory models and find that variation in development from birth to 55 months of age is best described by a model with three distinct dimensions. We also find evidence that dimensionality increases across age, with the youngest children described by a two-factor model. These results provide a model-based method for linking holistic descriptions of early development to basic theoretical questions about the nature of change in childhood.
     
 keywords: >
     child development; milestones; item response theory; model comparison
@@ -80,7 +80,7 @@ This question is important not only from a theoretical perspective but also for 
 
 Our goal is to describe the psychometric structure of development. We take as our starting point the idea that psychometric models can instantiate hypotheses about psychological structure in ways that can be assessed via their fit to data. We adopt the framework of item response theory (IRT). IRT models allow us to capture how responses to such questions track both with individual children's abilities as well as with the measurement properties of the questions (and underlying milestones). In particular, our interest is in comparing within a family of multidimensional IRT models in order to gain insight into the underlying dimensionality of early childhood development. 
 
-In a standard factor-analytic approach (which multi-dimensional IRT extends), a solution with N factors partitions observed variance into factors, suggesting dimensions of variation in the sample. One substantial complication to this perspective for analyzing developmental data is the issue that the dimensionality of children's variation could itself change developmentally. Indeed, the dedifferentiation hypothesis of cognitive aging — that distinct factors collapse is such a hypothesis. To address this challenge, we use a new set of cross-validation methods to investigate changes in dimensionality. 
+In a standard factor-analytic approach (which multi-dimensional IRT extends), a solution with N factors partitions observed variance into factors, suggesting dimensions of variation in the sample. One substantial complication to this perspective for analyzing developmental data is the issue that the dimensionality of children's variation could itself change developmentally. Indeed, the dedifferentiation hypothesis of cognitive aging — that distinct factors collapse — is such a hypothesis [@de2007revisiting]. To address this challenge, we use a new set of cross-validation methods to investigate changes in dimensionality. 
 
 We use milestone data for our investigation. Global assessment of developmental status via a series of binary questions (e.g., "Can your child walk at least ten steps unassisted?") is both a standard feature of pediatrician visits [@sheldrick2019establishing] and a gold standard for child development in the research and intervention communities [@bayley2009bayley; @bricker1999ages; @mccoy2019preschool]. In such assessments, which are typically but not always conducted via parent report, developmental progress is pooled across domains like motor development or language. Thus, these instruments implicitly assume a unifactorial model, although some also provide subscale scores [@bayley2009bayley].
 
@@ -92,7 +92,7 @@ We first describe our dataset. We then introduce the family of item response mod
 
 A child’s development can be thought of as the set of developmental milestones that they have reached at a particular point in time. This conceptualization results in data with the same structure as the item response data common to educational measurement. In education, item response data is most typically students responding to test items (i.e., questions) and, in the dichotomous case, getting each question either correct or incorrect. In the context of child development, the child is the “student,” and each developmental milestone is the “item.”
 
-We use Kinedu, a Mexico-based child development app, as a source for this type of data. When parents first start using the Kinedu app, they are asked a series of questions about which developmental milestones their child has reached. We consider the 1946 children between 2 and 55 months of age whose parents responded to all 414 of the developmental milestones. Each developmental miletone on Kinedu is mapped to a milestone group: physical, cognitive, linguistic, or social & emotional. Table \ref{tab:examples} shows the number of developmental milestones in each group along with an example milestone from each group translated to English.
+Data were provided by Kinedu, Inc., a developer of parenting applications. We consider the 1946 children between 2 and 55 months of age whose parents responded to all 414 of the developmental milestones. Kinedu, Inc. mapped each milestone to a face-valid group: physical, cognitive, linguistic, or social & emotional. Table \ref{tab:examples} shows the number of developmental milestones in each group along with an example milestone from each group translated to English.
 
 ```{r examples}
 areas %>%
@@ -102,20 +102,20 @@ areas %>%
     slice(1) %>%
     ungroup() %>%
     left_join(ms, by = c("paste" = "code")) %>%
-    select(Group = area, Count = count, spanish = short_name) %>%
+    select(Group = area, `Milestones` = count, spanish = short_name) %>%
     select(-spanish) %>% 
-    arrange(desc(Count)) %>%
+    arrange(desc(`Milestones` )) %>%
     mutate(`Example milestone` = c(
         "Stands on their toes",
         "Finds objects on the floor",
         "Babbles to imitate conversations",
-        "Complains when play is interrupted"
+        "Complains when play is stopped"
     )) %>% 
     knitr::kable("latex", caption = "Developmental milestone groups and examples") %>% 
     kableExtra::kable_styling(font_size = 8, latex_options = "hold_position")
 ```
 
-Figure \ref{fig:growth} shows the age (in months) and number of developmental milestones for each child. At 12 months old, most children have reached about 200 developmental milestones. At 24 months old, most children have reached about 300 developmental milestones. Finally, at 48 months old, most children have reached about 375 of the 414 developmental milestones.
+Figure \ref{fig:growth} shows the age (in months) and number of completed milestones for each child. At 12 months old, most children have reached about 200 developmental milestones. At 24 months old, most children have reached about 300 developmental milestones. At 48 months old, most children have reached about 375 of the 414 developmental milestones.
 
 ```{r growth, fig.cap = 'Number of milestones by age and percentile curves. Dots represent individual children. ', warning = FALSE}
 source(here::here("data-emailed-from-mike/predictQR_fixed.R"))
@@ -156,33 +156,38 @@ ggplot(by_age,
   geom_jitter(height = 0, width = 0, alpha = .1) +  # was width = 0.2 and alpha 0.3
   geom_line(data = preds, aes(x = age, y = pred, col = Percentile, group = Percentile)) + 
   ylim(0,nrow(milestones)) + 
-  xlim(0,55) + 
+  xlim(0,60) + 
   ylab("Total milestones") + 
   xlab("Age (in months)") + 
   ggthemes::scale_color_solarized() + 
   theme(legend.position = "bottom", 
-        legend.title = element_text(size = 6),
-        legend.text = element_text(size=6))
+        legend.title = element_text(size = 7),
+        legend.text = element_text(size= 7),
+        legend.key.size = unit(0.5, "cm"))
 ```
 
-# Empirical assessment of the dimensionality of child development
+# Methods
 
 We frame the assessment of the dimensionality of child development as a model comparison question. 
 
 ## Models
 
-Item response theory offers a suite of models with which to model item response data. We adopt the notation used in @chalmers2012mirt. Let $i = 1, \ldots, I$ represent the distinct children and $j = 1, \ldots, J$ the developmental milestones. The Kinedu item response data is stored in a matrix, $y$, where element $y_{ij}$ denotes if the $i$th child has or has not achieved the $j$th developmental milestone as reported by their parent/guardian. Each model represents the $i$th child's development using $m$ latent factors $\boldsymbol{\theta}_{i}=(\theta_1, \dots, \theta_m)$. The $j$th milestone's discriminations (i.e. slopes) $\boldsymbol{a_j}=(a_1, \dots, a_m)$ capture the latent factor loadings onto that milestone. 
+Item response theory offers a suite of models with which to model item response data. We adopt the notation used in @chalmers2012mirt. Let $i = 1, \ldots, I$ represent the distinct children and $j = 1, \ldots, J$ the developmental milestones. The item response data is stored in a matrix, $y$, where element $y_{ij}$ denotes if the $i$th child has or has not achieved the $j$th developmental milestone as reported by their parent/guardian. Each model represents the $i$th child's development using $m$ latent factors $\boldsymbol{\theta}_{i}=(\theta_1, \dots, \theta_m)$. The $j$th milestone's discriminations (i.e. slopes) $\boldsymbol{a_j}=(a_1, \dots, a_m)$ capture the latent factor loadings onto that milestone. 
 
-We fit four two-parameter logistic (2PL) models where a child’s development is represented by $m = 1, \ m = 2, \ m = 3, \ m = 4$ and $m = 5$ latent factors. Hereafter, we, for example, refer to a 2PL model with $m = 4$ latent factors as a 4F 2PL model. According to the 2PL model, the probability of a child having achieved a developmental milestone is
+We fit five two-parameter logistic (2PL) models where a child’s development is represented by $m = 1, \ m = 2, \ m = 3, \ m = 4$ and $m = 5$ latent factors. Hereafter, we, for example, refer to a 2PL model with $m = 4$ latent factors as a 4F 2PL model. According to the 2PL model, the probability of a child having achieved a developmental milestone is
 $$
 P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbol{a}_{j}^{\top}\boldsymbol{\theta_i} + b_j)
 $$
-where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. We also fit a 1F Rasch model where each of the discriminations is fixed to 1. As an example, Figure \ref{fig:icc} shows item characteristic curves from 1F 2PL model for the items in Table \ref{tab:examples}. Item characteristic curves show how $P(y_{ij} = 1)$ changes as $\theta_i$ changes for a particular item. These curves reveal that most children babbling and babbling is unrelated with development. On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
+where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. As an example, Figure \ref{fig:icc} shows item characteristic curves from the 1F 2PL model for the items in Table \ref{tab:examples}. Item characteristic curves show how $P(y_{ij} = 1)$ changes as $\theta_i$ changes for a particular item. These curves reveal that babbling is unrelated to development. On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
 
-The 2PL models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table \ref{tab:examples}. For the bifactor model, the probability of a child having achieved a developmental milestone is 
+We explored 3PL models, which add a guessing parameter to the 2PL model, but they did not fit better and so we omit them for space, preferring instead to look at the more interesting factor structure. We do include a 1F Rasch model where all of the discriminations, $\boldsymbol{a}_{j}$, are set to 1 for each item.
+
+Each of these models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table \ref{tab:examples}. For the bifactor model, the probability of a child having achieved a developmental milestone is 
 $$
 P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s + b_j).
 $$
+
+Computing is done in R [@rcore], model fitting in the R package mirt [@chalmers2012mirt], and data wrangling/visualization in the set of R packages known as the tidyverse [@tidy].
 
 ```{r icc, fig.cap = "Example item characteristic curves. Babbling is unrelated to a child's development whereas finding objects on the floor is highly related to development."}
 library(mirt)
@@ -213,7 +218,7 @@ names(traceline) <-
     "Finds objects on the floor", 
     "Babbles to imitate conversations", 
     "Stands on their toes", 
-    "Complains when play is interrupted"
+    "Complains when play is stopped"
   )
 
 # rbind traceline
@@ -242,13 +247,14 @@ l.format %>%
   facet_wrap(~ item) +
   xlab(expression(theta)) + 
   ylab("Probability of milestone") + 
-  theme_classic(base_size = 6)
+  theme_classic(base_size = 8) +
+  theme(strip.text.x = element_text(size = 5.5))
 ```
 
 
 ## Model comparison {#modelcompare}
 
-Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes or misspecification [@mcdonald1995goodness]. Instead, we prefer a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
+Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes or misspecification [@mcdonald1995goodness]. Instead, we use a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
 
 Mathematically and following notation similar to @vehtari2017practical, we partition the data into $K$ subsets $y^{(k)}$ for $k = 1, \dots, K$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample or cross-validated) likelihood of $y^{(k)}$ is
 
@@ -262,11 +268,9 @@ $$
 \text{lpl } y = \sum_{k = 1}^{K} \log p(y^{(k)} | y^{(-k)}).
 $$
 
-## Results
+# Results
 
-Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which neccessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison section](#modelcompare). The 4F 2PL model performs best which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
-
-Computing is done in R [@rcore], model fitting in the R package mirt [@chalmers2012mirt], and data wrangling/visualization in the set of R packages known as the tidyverse [@tidy].
+Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which neccessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison section](#modelcompare). The 3F 2PL model performs best which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
 
 ```{r results}
 # will need latek in kables:
@@ -299,7 +303,7 @@ full %>%
 
 ## Understanding the latent factor structure
 
-To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor load mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly load positively on linguistic milestones and, interestingly, negatively on physical milestones. 
+To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor loads mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly load positively on linguistic milestones and, interestingly, negatively on physical milestones. 
 
 ```{r, include = FALSE}
 mod3 <- full$model_full[[4]]
@@ -327,20 +331,21 @@ mod3_summary_with_areas %>%
     ) +
     theme_classic(base_size = 8) + 
     theme(legend.position = "bottom", 
-          legend.title = element_text(size = 6),
-          legend.text = element_text(size=6),
-          legend.key.size = unit(0.2, "cm"))
+          legend.title = element_blank(),
+          legend.text = element_text(size = 6),
+          legend.key.size = unit(0.4, "cm")) +
+    scale_fill_viridis_d()
 ```
 
-We also estimate the factor scores for each child using expected a posteriori (EAP) with a three dimensional standard normal distribution [@embretson2013item].  Figure \ref{fig:factorscores} shows the relationship between age and factor score for each factor. The first factor, perhaps unsurprisingly, has a high correlation (r = 0.90) with age. The second factor has a strong association with age from 2 to 16 months but thereafter is unrelated to age. By and large, the third factor does not have any association with age.
+```{r, include = FALSE}
+f <- fscores(mod3, rotate = "varimax")
+tmp <- f %>% as_tibble() %>% mutate(age = ages$age)
+```
+
+
+We also estimate the factor scores for each child using expected a posteriori (EAP) with a three dimensional standard normal distribution [@embretson2013item].  Figure \ref{fig:factorscores} shows the relationship between age and factor score for each factor. The first factor, perhaps unsurprisingly, has a high correlation (r = `r -round(cor(tmp$F1, tmp$age), 2)`) with age. The second factor has a strong association with age from 2 to 16 months but thereafter is unrelated to age. By and large, the third factor does not have any association with age.
 
 ```{r factorscores, fig.cap = 'The first factor is highly associated with age'}
-f <- fscores(mod3, rotate = "varimax")
-
-# to find that correlation of 0.9 above
-# tmp <- f %>% as_tibble() %>% mutate(age = ages$age)
-# cor(hi$F1, hi$age)
-
 f %>%
     as_tibble() %>%
     mutate(age = ages$age) %>%
@@ -357,20 +362,20 @@ f %>%
     )
 ```
 
-# Dimensionality across the age-span
+## Dimensionality across the age-span
 
-For the entire dataset, we’ve shown evidence that 4-factors performs best. But is this latent factor dimensionality consistent across age-span? For example, perhaps for very young children 1-factor is sufficient and then later on 2- and then 3-factors become valuable. We take two approaches to assessing the dimensionality of child development across the age-span. First, we examine the performance of each of the models by age. Second, we partition the data by age and use the same cross-validation procedure to find the best fitting model in each partition.
+For the entire dataset, we’ve shown evidence that the 2PL model with 3-factors performs best. But is this latent factor dimensionality consistent across age-span? For example, perhaps for very young children 1-factor is sufficient and then later on 2- and then 3-factors become valuable. We take two approaches to assessing the dimensionality of child development across the age-span. First, we examine the performance of each of the models by age. Second, we partition the data by age and use the same cross-validation procedure to find the best fitting model in each partition.
 
 ## Full model {#full}
 
-Figure \ref{fig:byage} displays the mean cross-validated log likelihood for each model by age, which comes from the k-fold cross-validation described in the [model comparison](#modelcompare) section. For each student, we calculate the marginalized out-of-sample likelihood based on the item parameters $\Psi_j^{(-k)}$ from fitting the model to $y^{(-k)}$, the folds of data that does not include the student. As a reminder, students are assigned to folds randomly and not by age. 
+Figure \ref{fig:byage} displays the mean cross-validated log likelihood for each model by age, which comes from the k-fold cross-validation described in the [model comparison](#modelcompare) section. For each student, we calculate the marginalized out-of-sample likelihood based on the item parameters $\Psi_j^{(-k)}$ from fitting the model to $y^{(-k)}$, the folds of data that do not include the student. As a reminder, students are assigned to folds randomly and not by age. 
 
-Figure \ref{fig:byage} shows how both the 4F 2PL and bifactor models compare to the 2F 2PL model in terms of cross-validated log likelihood for each age. The 2F 2PL outperforms both models for children younger than 7 months old. For children older than 11 months old both the 4F 2PL and bifactor models outperform the 2F 2PL model with the 4F 2PL model tending to perform best. Interestingly, the bifactor model performs more similarly across the age-span to the 4F 2PL than the 2F 2PL despite having a similar number of parameters to the 2F 2PL. 
+Figure \ref{fig:byage} shows how both the 3F 2PL and bifactor models compare to the 2F 2PL model in terms of cross-validated log likelihood for each age. The 2F 2PL outperforms both models for children younger than 7 months old. For children older than 11 months old, both the 3F 2PL and bifactor models outperform the 2F 2PL model with the 3F 2PL model tending to perform best. 
 
 ```{r byage, fig.cap = 'Comparing the 4F 2PL and Bifactor models to the 2F 2PL'}
 read_rds(here::here("03_model_by_age.rds")) %>%
-    filter(model %in% c("2F 2PL", "4F 2PL", "Bifactor")) %>%
-    mutate(model = factor(model, levels = c("2F 2PL", "Bifactor", "4F 2PL"))) %>% 
+    filter(model %in% c("2F 2PL", "3F 2PL", "Bifactor")) %>%
+    mutate(model = factor(model, levels = c("2F 2PL", "Bifactor", "3F 2PL"))) %>% 
     select(model, oos) %>%
     unnest(oos) %>%
     mutate(oos = log(oos)) %>%
@@ -378,7 +383,7 @@ read_rds(here::here("03_model_by_age.rds")) %>%
     summarize(m = mean(oos)) %>%
     ungroup() %>%
     spread(model, m) %>% 
-    mutate(`4F 2PL` = `4F 2PL` - `2F 2PL`, Bifactor = Bifactor - `2F 2PL`) %>% 
+    mutate(`3F 2PL` = `3F 2PL` - `2F 2PL`, Bifactor = Bifactor - `2F 2PL`) %>% 
     select(-`2F 2PL`) %>% 
     gather(Model, m, -age) %>% 
     ggplot(aes(x = age, y = m, color = Model)) +
@@ -388,14 +393,15 @@ read_rds(here::here("03_model_by_age.rds")) %>%
     labs(x = "Age (in months)", y = "Mean difference in log likelihood") +
     theme_classic(base_size = 10) + 
     theme(legend.position = "bottom", 
-            legend.title = element_text(size = 8),
+            legend.title = element_blank(),
             legend.text = element_text(size = 8),
-            legend.key.size = unit(0.3, "cm"))
+            legend.key.size = unit(0.5, "cm")) +
+    ggthemes::scale_color_solarized()
 ```
 
 ## Age-partitioned models
 
-As another method of examining the dimensionality of child development across the age span, we create four partitions of the data based on the ages of the children. We then cross-validate the 2PL models independently in each partition. This allows us to examine the dimensionality for each age group separately. For each age partition, we drop milestones where less than 2.5% or greater than 97.5% of children have reached the milestone. Dropping milestones is done because these milestones do not contain much information and make IRT models less stable. This process results in, for example, 432 children and 359 milestones in the 13-24 month old partition.
+As another method of examining the dimensionality of child development across the age span, we create four partitions of the data based on the ages of the children. We then cross-validate the 2PL models independently in each partition. This allows us to examine the dimensionality for each age group separately. For each age partition, we drop milestones where less than 2.5% or greater than 97.5% of children have reached the milestone. We drop these milestones because they contain little information and make the models less stable. This process results in, for example, 432 children and 359 milestones in the 13-24 month old partition.
 
 Figure \ref{fig:partage} shows the results of this analysis. Consistent with our findings in the [previous section](#full), the best fitting model contains a lower dimensional factor structure for younger children. The best fitting model is the 2F 2PL for the partition of data containing children two to 12 months old, whereas the best fitting model is the 3F 2PL for the partitions containing older children.
 
@@ -424,7 +430,7 @@ tibble(
   ) %>% 
   unnest() %>% 
   select(years, kids, items, factors, itemtype, log_lik, log_lik_test) %>% 
-  mutate(var = as_factor(paste0(years, " ", kids, " kids", " ", items, " items"))) %>% 
+  mutate(var = as_factor(paste0(years, " ", kids, " kids", " ", items, " milestones"))) %>% 
   filter(itemtype == "2PL") %>% 
   ggplot(aes(x = factors, y = log_lik_test)) +
   geom_point() +
@@ -439,15 +445,23 @@ tibble(
 
 # Discussion
 
-Is child development a singlue unified process or a host of different processes? Piaget famously proposed a stage theory but did not have the data with which to offer an empirical answer. We used the Mexico-based child development app, Kinedu, where parents report the developmental milestones that their child has reached as a source of data. We measured the dimensionality of child development in this data by comparing item-response models that varied in how they represented the latent factor structure of development. We found that the 3F 2PL model performed best as measured by cross-validated log-likelihood, $\text{lpl } y$. This is evidence that child development from 0 - 55 months of age has at least three dimensions. In terms of milestones, the first dimension loaded highly on cognitive and linguistic milestones. The second dimension focused on physical and social & emotional milestones. The third dimension was positively associated with linguistic milestones and negatively associated with physical milestones. In terms of children, the first dimension was highly associated with age whereas the second and third dimensions were mostly unassociated with age. We also found that the dimensionality of development grows over the age-span.
+Is child development a single unified process or a host of different processes? Stage theories assume synchronization in developmental changes across distinct domains like language, social/emotional development, and cognition. In contrast, more modern modular theories tend to assume that particular aspects of development proceed "on their own schedule" [@spelke1992origins]. Here, inspired by psychometric studies of age-related changes in cognition, we explored this issue in a large dataset of children's developmental milestones. Our premise was that understanding the nature of variation in milestones could help shed light on whether children's developmental change covaries across domains within a single factor or whether it is split into multiple factors.
 
-The main limitation of this study is that our data is from a very specific population of children and parents: Namely middle-class Mexican families where the parents both use Kinedu and have the patience to answer over 400 developmental milestone questions. Future work should apply the same methodology to a variety of similar datasets that target other populations. An additional limitation is that all of our data comes from parents. It's impossible for us to be sure that we've measured true variation in child development as opposed to variation in how students perceive or report their child's development. In general, parent reporting is incredibly common but can have significant limitations [@wordbank; @tomasello1994instrument; @feldman2000measurement]. Ideally, future work will include datasets that do not gather data from parent reporting. 
+Using multi-factor item response theory models and a new cross-validation method for model comparison, we found that a three-factor model best described developmental variation across the first 55 months. While the first factor described a large amount of shared variation in development, the structure of these factors did suggest some differentiation between cognitive/linguistic development, physical development, and socio/emotional development. Further, we found that the dimensionality of variation increased developmentally: 2--12 month-olds were best described by a two-dimensional model, while older groups were best described by a three-dimensional model. This analysis provides tentative support for a developmental differentiation hypothesis, where different domains of development vary across individuals in a way that is increasingly more independent over age.
 
-Future work should also look to understand practical implications of dimensionality. Should parents notice multiple dimensions or will they mostly notice only the first dimension? Do the multiple dimensions have implications for how we should intervene if a child is not developing properly? For example, perhaps the best intervention for developmental delay on the second dimension is quite different from the best intervention for developmental delay on the first dimension.
+Our study has a number of limitations that should inform future work. Our dataset is cross-sectional, meaning that we are only describing variation across individuals rather than the coherence of factors within individuals. Second, we relied on parent report, which can have significant biases and limitations, especially in its precision regarding capacities that are difficult to observe [e.g., cognitive abilities; @feldman2000measurement; @wordbank]. Third, our data come from a very specific population group (middle- and upper-class Mexican parents whose children were in group care) and hence caution is warranted in generalizing to other populations.
+
+This work has significant practical implications: Measures of developmental change should not assume that a single score captures all of the variance in developmental change. Thus, understanding the generality of our conclusions is an important practical goal that could affect the structure of a variety of standardized developmental inventories in broad clinical and research use.
+
+The nature of developmental variation is of core importance to our theorizing about the mechanisms of child development. Yet this variation has often been assumed to be unifactorial or multifactorial without formal evaluation. Our work here takes a first step towards using psychometric models to evaluate this dimensionality empirically.
 
 # Acknowledgements
 
-We'd like to thank Kinedu for providing the data that made this research possible. We'd also like to thank George Kachergis and Alex Carstensen for insightful comments on early versions of this paper.
+```{r}
+# Thanks to Kinedu, Inc. for support and data sharing and to George Kachergis, Alex Carstensen, and Ann Weber for comments on early versions of this paper.
+```
+
+[BLINDED]
 
 # References 
 

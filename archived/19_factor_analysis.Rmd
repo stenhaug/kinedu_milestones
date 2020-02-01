@@ -67,6 +67,20 @@ scree(cor(wide %>% dplyr::select(-age)), pc = FALSE)
 psy::scree.plot(fit$correlation)
 ```
 
+```{r}
+pca <- prcomp(wide %>% dplyr::select(-age), center = TRUE,scale. = TRUE)
+
+summary(pca)
+
+scree(pca)
+
+library(factoextra)
+
+install.packages("factoextra")
+
+fviz_eig(pca)
+```
+
 # THIS IS A PRETTY COOL PLOT DUDE
 
 ```{r}

@@ -67,7 +67,10 @@ n_children <- nrow(responses_wide)
 n_milestones <- ncol(responses_wide) - 1
 
 results <-
-	bind_rows(read_rds(here("02_mirts_2_add_5.rds")), read_rds(here("02_bifactors.rds"))) %>%
+	bind_rows(
+		read_rds(here("data-models", "models_exploratory_figshare.rds")), 
+		read_rds(here("data-models", "models_bifactor_figshare.rds"))
+	) %>%
 	rename(out_of_sample = ll_person_item) %>%
 	mutate(
 		in_sample = exp(log_lik / n_children)^(1/n_milestones),
@@ -250,7 +253,7 @@ l.format %>%
 
 Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes or misspecification [@mcdonald1995goodness]. Instead, we use a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
 
-Mathematically and following notation similar to @vehtari2017practical, we partition the data into $K$ subsets $y^{(k)}$ for $k = 1, \dots, K$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample or cross-validated) likelihood of $y^{(k)}$ is
+Mathematically and following notation similar to @vehtari2017practical, we partition the data into 6 subsets $y^{(k)}$ for $k = 1, \dots, 6$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample or cross-validated) likelihood of $y^{(k)}$ is
 
 $$
 p(y^{(k)} | y^{(-k)}) = \prod_{i \in i^{(k)}}^{I} \int_\theta \prod_{j=1}^{J} \hat{\text{Pr}}(y_{ij}^{(k)} | \Psi_j^{(-k)}, \theta) g(\theta)d\theta.
@@ -410,7 +413,7 @@ As another method of examining the dimensionality of child development across th
 Figure \ref{fig:partage} shows the results of this analysis. Consistent with our findings in the [previous section](#full), the best fitting model contains a lower dimensional factor structure for younger children. The best fitting model is the 2F 2PL for the partition of data containing children two to 12 months old, whereas the best fitting model is the 3F 2PL for the partitions containing older children.
 
 ```{r partage, fig.cap = '2F 2PL best for young kids; 3F 2PL best for older kids'}
-age_partitioned_models <- read_rds(here("data-models", "age_partitioned_models.rds"))
+age_partitioned_models <- read_rds(here("data-models", "age_partitioned_models_figshare.rds"))
 
 add_lltest <- function(df){
   df %>% 

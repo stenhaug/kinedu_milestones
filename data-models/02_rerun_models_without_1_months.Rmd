@@ -11,6 +11,10 @@ library(here)
 library(mirt)
 mirtCluster()
 library(rsample)
+
+source(here("R", "calc_log_lik_ghq2_student.R"))
+source(here("R", "fix_factors.R"))
+source(here("R", "factors_itemtype_splits_df_to_splits_with_log_lik.R"))
 ```
 
 load then filter by age
@@ -30,10 +34,15 @@ by_age <-
 
 responses_wide <- responses_wide %>% filter(id %in% by_age$id)
 responses_long <- responses_long %>% filter(age > 1)
+
+responses_matrix <- 
+	responses_wide %>% 
+	select(-id) %>% 
+	as.matrix()
 ```
 
 ```{r}
-splits_response_matrix <- vfold_cv(splits_response_matrix, v = 5) # crank
+splits_response_matrix <- vfold_cv(responses_matrix, v = 6)
 ```
 
 # mirts

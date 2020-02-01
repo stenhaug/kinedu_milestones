@@ -1,0 +1,101 @@
+---
+title: "models_exploratory"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+set.seed(123)
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(mirt)
+mirtCluster()
+library(rsample)
+
+source(here("R", "calc_log_lik_ghq2_student.R"))
+source(here("R", "fix_factors.R"))
+source(here("R", "bifactor_factors_itemtype_splits_df_to_splits_with_log_lik.R"))
+```
+
+load then filter by age
+
+```{r}
+responses_long <- read_rds(here("data-clean/responses_long.rds"))
+responses_wide <- read_rds(here("data-clean/responses_wide.rds"))
+areas <- read_rds(here("data-clean/areas.rds"))
+
+by_age <-
+	responses_long %>%
+	group_by(id) %>%
+	summarize(
+		age = age[1],
+		response = sum(response)
+	) %>%
+	filter(age > 1)
+
+responses_wide <- responses_wide %>% filter(id %in% by_age$id)
+responses_long <- responses_long %>% filter(age > 1)
+
+responses_matrix <- 
+	responses_wide %>% 
+	select(-id) %>% 
+	as.matrix()
+
+# need to match areas to the responses_matrix order
+areas <- 
+	areas %>% 
+	filter(paste %in% colnames(responses_matrix)) %>% 
+	mutate(where_in_mat = match(paste, colnames(responses_matrix))) %>% 
+	arrange(where_in_mat)
+
+# here is our double check
+all(areas2$paste == colnames(responses_matrix))
+```
+
+randomly split data
+
+```{r}
+splits_response_matrix <- vfold_cv(responses_matrix, v = 6)
+```
+
+fit the bifactor model
+
+```{r}
+models_bifactors <- 
+	tribble(
+		~factors,  ~itemtype,
+		"bifact_all",  "2PL"
+	) %>% 
+	mutate(
+		model_full =
+			map(
+				map(factors, bifactor_to_specific),
+				~ bfactor(responses_matrix, ., technical = list(NCYCLES = 500))
+			),
+		log_lik = map_dbl(model_full, logLik),
+		n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
+		fscores = map(model_full, fscores)
+    ) %>% 
+	mutate(
+		splits_with_log_lik = 
+			map(
+				factors, 
+				bifactor_factors_splits_df_to_splits_with_log_lik, 
+				splits_response_matrix,
+				n_cycles = 500,
+                verbose = FALSE
+            )
+	) %>% 
+    mutate(
+    	ll_person = 
+    		splits_with_log_lik %>% 
+    		map_dbl(~ exp(sum(.$log_lik_test) / nrow(responses_matrix))),
+    	ll_person_item = ll_person ^ (1 / ncol(responses_matrix))
+    )
+```
+
+output
+
+```{r}
+models_bifactors %>% write_rds(here("data-models", "models_bifactors.rds"))
+```

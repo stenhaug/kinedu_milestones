@@ -7,31 +7,33 @@ output: github_document
 set.seed(123)
 knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
+library(here)
 library(mirt)
 mirtCluster()
 library(rsample)
-theme_set(theme_classic(base_size = 14))
-options(pillar.sigfig = 6)
+```
 
-R.utils::sourceDirectory("~/Google_Drive/5_Projects/irt_comparison_folders/irt_comparison3/R")
-source("archived/06_functions.R")
+load then filter by age
 
-areas <- read_rds("data-clean/areas.rds")
-d <- read_rds("data-clean/d.rds")
-d_mat <- read_rds("data-clean/d_mat.rds")
-item_area <- areas$area[match(colnames(d_mat), areas$paste)]
+```{r}
+responses_long <- read_rds(here("data-clean/responses_long.rds"))
+responses_wide <- read_rds(here("data-clean/responses_wide.rds"))
 
-# filter out age == 1
-ages <- 
-    d %>% 
-    group_by(id) %>% 
-    summarize(age = age[1]) %>% 
-    filter(age > 1)
+by_age <-
+	responses_long %>%
+	group_by(id) %>%
+	summarize(
+		age = age[1],
+		response = sum(response)
+	) %>%
+	filter(age > 1)
 
-d_mat <- d_mat[row.names(d_mat) %in% ages$id, ]
-# end filter
+responses_wide <- responses_wide %>% filter(id %in% by_age$id)
+responses_long <- responses_long %>% filter(age > 1)
+```
 
-splits_d_mat <- vfold_cv(d_mat, v = 5) # crank
+```{r}
+splits_response_matrix <- vfold_cv(splits_response_matrix, v = 5) # crank
 ```
 
 # mirts
@@ -56,8 +58,8 @@ mirts <-
                     d_mat,
                     .x, 
                     .y,
-                    method = "EM", # might edit!
-                    technical = list(NCYCLES = 400) # crank
+                    method = "EM", 
+                    technical = list(NCYCLES = 500)
                 )
             ),
         log_lik = map_dbl(model_full, logLik),
@@ -71,7 +73,7 @@ mirts <-
                 itemtype, 
                 factors_itemtype_splits_df_to_splits_with_log_lik, 
                 splits_d_mat,
-                n_cycles = 400, # crank
+                n_cycles = 500, 
                 verbose = TRUE,
                 the_method = "EM"
       )
@@ -82,7 +84,6 @@ mirts <-
           map_dbl(~ exp(sum(.$log_lik_test) / nrow(d_mat))),
         ll_person_item = ll_person ^ (1 / ncol(d_mat))
   )
-
 mirts %>% write_rds("02_mirts_2_add_5.rds")
 ```
 

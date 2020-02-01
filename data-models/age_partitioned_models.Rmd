@@ -1,0 +1,109 @@
+---
+title: "age_partitioned_models"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(here)
+library(mirt)
+mirtCluster()
+library(rsample)
+
+source(here("R", "calc_log_lik_ghq2_student.R"))
+source(here("R", "fix_factors.R"))
+source(here("R", "factors_itemtype_splits_df_to_splits_with_log_lik.R"))
+
+responses_long <- read_rds(here("data-clean/responses_long.rds"))
+responses_wide <- read_rds(here("data-clean/responses_wide.rds"))
+
+responses_matrix <- 
+	responses_wide %>% 
+	select(-id) %>% 
+	as.matrix()
+
+row.names(responses_matrix) <- responses_wide$id	
+```
+
+Write a function that I can simply pass a partition to
+
+```{r}
+split_and_run <- function(responses_matrix){
+    
+    splits_response_matrix <- vfold_cv(responses_matrix, v = 6)
+    
+    mirts <- 
+      tribble(
+        ~factors,  ~itemtype,
+            "1",      "Rasch",
+            "1",      "2PL",
+            "2",      "2PL",
+            "3",      "2PL"
+      ) %>% 
+        mutate(
+            model_full =
+                map2(
+                    map(factors, fix_factors),
+                    itemtype,
+                    ~ mirt(
+                        responses_matrix,
+                        .x, 
+                        .y,
+                        technical = list(NCYCLES = 1000)
+                    )
+                ),
+            log_lik = map_dbl(model_full, logLik),
+            n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
+            fscores = map(model_full, fscores)
+        ) %>% 
+        mutate(
+            splits_with_log_lik = 
+                map2(
+                    factors, 
+                    itemtype, 
+                    factors_itemtype_splits_df_to_splits_with_log_lik, 
+                    splits_response_matrix,
+                    n_cycles = 1000,
+                    verbose = TRUE
+          )
+      ) %>% 
+        mutate(
+            ll_person = 
+              splits_with_log_lik %>% 
+              map_dbl(~ exp(sum(.$log_lik_test) / nrow(responses_matrix))),
+            ll_person_item = ll_person ^ (1 / ncol(responses_matrix))
+      )
+
+    mirts
+}
+```
+
+Now we can run!
+
+```{r}
+by_age_with_year <- 
+    responses_long %>% 
+    group_by(id) %>% 
+    summarize(age = age[1]) %>% 
+    filter(age > 1) %>% 
+    mutate(year = age %/% 12 + 1)
+
+age_partitioned_models <- 
+    tibble(years = list(1, 2, 3, c(4, 5))) %>% 
+    mutate(
+    	responses_matrix = 
+    		years %>% 
+    		map(
+    			~ responses_matrix[row.names(responses_matrix) %in% filter(by_age_with_year, year %in% .)$id, ]
+    		),
+    	responses_matrix_filter = responses_matrix %>% map(~ .[ , colMeans(.) > 0.025 & colMeans(.) < 0.975]),
+    	models = responses_matrix_filter %>% map(split_and_run)
+    )
+```
+
+Output
+
+```{r}
+age_partitioned_models %>% write_rds(here("data-models", "age_partitioned_models.rds"))
+```

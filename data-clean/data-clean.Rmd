@@ -1,0 +1,108 @@
+---
+title: "data-clean"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(readxl)
+library(here)
+```
+
+load in raw survey data
+
+```{r}
+fix_names <- function(x) ifelse(x == "", paste0("X__", 1:length(x) - 1), x)
+
+survey_raw <- 
+	read_xlsx(
+		here("data-raw", "Kinedu Norming Survey Raw Data - May 15 2018.xlsx"),
+		.name_repair = fix_names
+	)
+```
+
+create responses_long and responses_wide
+
+```{r}
+responses_long <- 
+	survey_raw %>%
+	mutate(
+		age = as.numeric(X__422), 
+		gestation = as.numeric(X__3),
+		kinder = as.numeric(X__4),
+		diagnosis = as.numeric(X__1), 
+		id = `Nombre variable`
+	) %>%
+	slice(4:n()) %>% # drop two top label rows. 
+	select(-starts_with("X"), -`Nombre variable`) %>%
+	gather(code, response, abs_183:color_679) %>%
+	mutate(
+		code = 
+			code %>% 
+			str_replace("^d_","d") %>% 
+			str_replace_all(" ", "") %>% 
+			str_replace("^e_",""),
+		code2 = code) %>%
+	separate(code2, into = c("category","number")) %>%
+	select(-number) %>%
+	mutate(response = as.numeric(response))
+
+responses_wide <- 
+	responses_long %>%
+	select(id, code, response) %>%
+	spread(code, response)
+```
+
+create milestones df
+
+```{r}
+milestones <-
+    survey_raw %>%
+    select(abs_183:color_679) %>%
+    slice(3) %>%
+    gather(code, name) %>%
+    mutate(short_name = str_sub(name, start = 0, end = 40),
+           code = str_replace(code, "^d_","d"),
+           code = str_replace(code, "^e_","")) %>%
+    mutate(code2 = code) %>%
+    separate(code2, into = c("category","number")) %>%
+    select(-number) %>% 
+    mutate(code = str_remove(code, " "))
+```
+
+find which areas which milestone maps to, which requires reading in new file
+
+```{r}
+areas <- 
+	read_excel(
+		here(
+			"data-raw", 
+			"0-48 milestones y abreviaciones (viejos vs nuevos).xlsx"
+		)
+	) %>% 
+	select(
+		abbrev = Abbreviation,
+		milestone = `Milestone ID...9`,
+		area = Area
+	) %>% 
+	mutate(
+		abbrev = 
+			abbrev %>% 
+			str_replace("^e_", "") %>% 
+			str_replace("_", ""),
+		paste = paste0(abbrev, "_", milestone)
+	)
+```
+
+```{r}
+survey_raw %>% write_rds("data-clean/survey_raw.rds")
+
+responses_long %>% write_rds("data-clean/responses_long.rds")
+responses_wide %>% write_rds("data-clean/responses_wide.rds")
+
+milestones %>% write_rds("data-clean/milestones.rds")
+areas %>% write_rds("data-clean/areas.rds")
+```
+
+

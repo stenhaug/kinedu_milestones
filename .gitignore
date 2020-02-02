@@ -1,8 +1,9 @@
-in-progress/
-BENSNOTES.md
-
-*.Rproj
 .Rproj.user
+*.Rproj
 *.Rdata
 *.rds
-gd
+
+gd/
+
+in-progress/
+BENSNOTES.md

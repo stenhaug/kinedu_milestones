@@ -191,14 +191,15 @@ Data were provided by Kinedu, Inc., a developer of parenting
 applications. We consider the 1946 children between 2 and 55 months of
 age whose parents responded to all 414 of the developmental milestones.
 Kinedu, Inc.~mapped each milestone to a face-valid group: physical,
-cognitive, linguistic, or social \& emotional. Table \ref{tab:examples}
-shows the number of developmental milestones in each group along with an
-example milestone from each group translated to English.
+cognitive, linguistic, or social \& emotional. Table
+\ref{tab:example_milestones} shows the number of developmental
+milestones in each group along with an example milestone from each group
+translated to English.
 
 \begin{CodeChunk}
 \begin{table}[!h]
 
-\caption{\label{tab:examples}Developmental milestone groups and examples}
+\caption{\label{tab:example_milestones}Developmental milestone groups and examples}
 \centering
 \fontsize{8}{10}\selectfont
 \begin{tabular}[t]{l|r|l}
@@ -227,7 +228,7 @@ milestones.
 
 \begin{CodeChunk}
 \begin{figure}[tb]
-\includegraphics{figs/growth-1} \caption[Number of milestones by age and percentile curves]{Number of milestones by age and percentile curves. Dots represent individual children. }\label{fig:growth}
+\includegraphics{figs/growth-1} \caption[Number of milestones completed by age with percentile curves]{Number of milestones completed by age with percentile curves. Dots represent individual children.}\label{fig:growth}
 \end{figure}
 \end{CodeChunk}
 
@@ -263,12 +264,13 @@ P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbo
 \] where \(b_j\) is the milestone easiness (i.e.~intercept) and
 \(\sigma(x) = \frac{e^x}{e^x + 1}\) is the standard logistic function.
 As an example, Figure \ref{fig:icc} shows item characteristic curves
-from the 1F 2PL model for the items in Table \ref{tab:examples}. Item
-characteristic curves show how \(P(y_{ij} = 1)\) changes as \(\theta_i\)
-changes for a particular item. These curves reveal that babbling is
-unrelated to development. On the other hand, finding objects on the
-floor is highly related to development with most children with
-\(\theta_i\) greater than -1.5 having reached this milestone.
+from the 1F 2PL model for the items in Table
+\ref{tab:example_milestones}. Item characteristic curves show how
+\(P(y_{ij} = 1)\) changes as \(\theta_i\) changes for a particular item.
+These curves reveal that babbling is unrelated to development. On the
+other hand, finding objects on the floor is highly related to
+development with most children with \(\theta_i\) greater than -1.5
+having reached this milestone.
 
 We explored 3PL models, which add a guessing parameter to the 2PL model,
 but they did not fit better and so we omit them for space, preferring
@@ -284,8 +286,9 @@ specification where each milestone loads onto a general factor
 factor is an opportunity to specify the latent factor structure, making
 the model confirmatory as opposed to exploratory. We map each milestone
 to its specific factor according to the four developmental milestone
-groups shown in Table \ref{tab:examples}. For the bifactor model, the
-probability of a child having achieved a developmental milestone is \[
+groups shown in Table \ref{tab:example_milestones}. For the bifactor
+model, the probability of a child having achieved a developmental
+milestone is \[
 P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s + b_j).
 \]
 
@@ -312,8 +315,8 @@ fold, we estimate the item parameters using all but that fold, and
 calculate the likelihood of that fold by integrating over \(g(\theta)\).
 
 Mathematically and following notation similar to Vehtari, Gelman, \&
-Gabry (2017), we partition the data into \(K\) subsets \(y^{(k)}\) for
-\(k = 1, \dots, K\). Each model is fit separately to each training set
+Gabry (2017), we partition the data into 6 subsets \(y^{(k)}\) for
+\(k = 1, \dots, 6\). Each model is fit separately to each training set
 \(y^{(-k)}\) yielding item parameter estimates which we compactly denote
 \(\Psi_j^{(-k)}\). The predictive (i.e.~out-of-sample or
 cross-validated) likelihood of \(y^{(k)}\) is

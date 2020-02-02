@@ -12,7 +12,7 @@ library(mirt)
 mirtCluster()
 library(rsample)
 
-source(here("R", "calc_log_lik_ghq2_student.R"))
+source(here("R", "calc_log_lik_ghq2.R"))
 source(here("R", "fix_factors.R"))
 source(here("R", "factors_itemtype_splits_df_to_splits_with_log_lik.R"))
 ```
@@ -39,6 +39,8 @@ responses_matrix <-
 	responses_wide %>% 
 	select(-id) %>% 
 	as.matrix()
+
+# MAKE SMALL TO TEST: responses_matrix <- responses_matrix[1:100, 1:10]
 ```
 
 randomly split data
@@ -69,13 +71,13 @@ models_exploratory <-
 					responses_matrix,
 					.x, 
 					.y,
-					method = "EM", 
-					technical = list(NCYCLES = 500)
+					method = "QMCEM", 
+					technical = list(NCYCLES = 200)
                 )
             ),
 		log_lik = map_dbl(model_full, logLik),
 		n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
-		fscores = map(model_full, fscores)
+		fscores = map(model_full, fscores, QMC = TRUE)
     ) %>% 
 	mutate(
 		splits_with_log_lik = 
@@ -84,9 +86,9 @@ models_exploratory <-
 				itemtype, 
 				factors_itemtype_splits_df_to_splits_with_log_lik, 
 				splits_response_matrix,
-				n_cycles = 500, 
+				n_cycles = 200, # EDIT
 				verbose = TRUE,
-				the_method = "EM"
+				the_method = "QMCEM"
 			)
 	) %>%
 	mutate(

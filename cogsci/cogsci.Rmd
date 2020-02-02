@@ -22,58 +22,65 @@ header-includes:
 final-submission: \cogscifinalcopy
 ---
 
-```{r global_options, include=FALSE}
+```{r setup, include=FALSE}
 knitr::opts_chunk$set(
-		fig.width=3, fig.height=3, fig.crop = F, fig.pos = "tb", fig.path='figs/', 
-  echo=F, warning=F, cache=F, message=F, sanitize = T
-  )
+	fig.width=3, fig.height=3, fig.crop = F, fig.pos = "tb", fig.path='figs/', 
+	echo=F, warning=F, cache=F, message=F, sanitize = T
+)
 
 library(tidyverse)
+library(rsample)
+library(here)
 library(mirt)
 library(quantregGrowth)
 theme_set(theme_classic())
 ```
 
 ```{r load_data}
-d_raw <- 
-  readxl::read_xlsx(
-    here::here("data/norming2/Kinedu Norming Survey Raw Data - May 15 2018.xlsx"),
-    .name_repair = function(x) ifelse(x == "", paste0("X__", 1:length(x) - 1), x)
-  )
+survey_raw <- read_rds(here("data-clean/survey_raw.rds"))
 
-areas <- read_rds(here::here("data-clean/areas.rds"))
+responses_long <- read_rds(here("data-clean/responses_long.rds"))
+responses_wide <- read_rds(here("data-clean/responses_wide.rds"))
 
-d_long <- read_rds(here::here("data-clean/d.rds"))
-
-d_mat <- read_rds(here::here("data-clean/d_mat.rds"))
-
-item_area <- areas$area[match(colnames(d_mat), areas$paste)]
-
-# remove ages <= 1 --------------------------------------------------------
-ages <-
-    d_long %>%
-    group_by(id) %>%
-    summarize(age = age[1]) %>%
-    filter(age > 1)
-
-d_mat <- d_mat[row.names(d_mat) %in% ages$id, ]
-
-d_long <- d_long %>% filter(age > 1)
+milestones <- read_rds(here("data-clean/milestones.rds"))
+areas <- read_rds(here("data-clean/areas.rds"))
 ```
 
-```{r create_milestones_df}
-milestones <-
-    d_raw %>%
-    select(abs_183:color_679) %>%
-    slice(3) %>%
-    gather(code, name) %>%
-    mutate(short_name = str_sub(name, start = 0, end = 40),
-           code = str_replace(code, "^d_","d"),
-           code = str_replace(code, "^e_","")) %>%
-    mutate(code2 = code) %>%
-    separate(code2, into = c("category","number")) %>%
-    select(-number) %>% 
-    mutate(code = str_remove(code, " "))
+```{r remove_ages}
+# remove ages <= 1
+
+by_age <-
+	responses_long %>%
+	group_by(id) %>%
+	summarize(
+		age = age[1],
+		response = sum(response)
+	) %>%
+	filter(age > 1)
+
+responses_wide <- responses_wide %>% filter(id %in% by_age$id)
+responses_long <- responses_long %>% filter(age > 1)
+```
+
+```{r load_results}
+n_children <- nrow(responses_wide)
+n_milestones <- ncol(responses_wide) - 1
+
+results <-
+	bind_rows(
+		read_rds(here("data-models", "models_exploratory_figshare.rds")), 
+		read_rds(here("data-models", "models_bifactor_figshare.rds"))
+	) %>%
+	rename(out_of_sample = ll_person_item) %>%
+	mutate(
+		in_sample = exp(log_lik / n_children)^(1/n_milestones),
+		oos = splits_with_log_lik %>% map_dbl(~ sum(.$log_lik_test))
+	) %>% 
+	select(
+		factors, itemtype, in_log_lik = log_lik, in_p = in_sample,
+		out_log_lik = oos, out_p = out_of_sample, model_full, 
+		fscores, splits_with_log_lik
+	)
 ```
 
 # Introduction
@@ -96,69 +103,71 @@ We first describe our dataset. We then introduce the family of item response mod
 
 A child’s development can be thought of as the set of developmental milestones that they have reached at a particular point in time. This conceptualization results in data with the same structure as the item response data common to educational measurement. In education, item response data is most typically students responding to test items (i.e., questions) and, in the dichotomous case, getting each question either correct or incorrect. In the context of child development, the child is the “student,” and each developmental milestone is the “item.”
 
-Data were provided by Kinedu, Inc., a developer of parenting applications. We consider the 1946 children between 2 and 55 months of age whose parents responded to all 414 of the developmental milestones. Kinedu, Inc. mapped each milestone to a face-valid group: physical, cognitive, linguistic, or social & emotional. Table \ref{tab:examples} shows the number of developmental milestones in each group along with an example milestone from each group translated to English.
+Data were provided by Kinedu, Inc., a developer of parenting applications. We consider the 1946 children between 2 and 55 months of age whose parents responded to all 414 of the developmental milestones. Kinedu, Inc. mapped each milestone to a face-valid group: physical, cognitive, linguistic, or social & emotional. Table \ref{tab:example_milestones} shows the number of developmental milestones in each group along with an example milestone from each group translated to English.
 
-```{r examples}
+```{r example_milestones}
 areas %>%
-    filter(paste %in% colnames(d_mat)) %>%
-    group_by(area) %>%
-    mutate(count = n()) %>%
-    slice(1) %>%
-    ungroup() %>%
-    left_join(milestones, by = c("paste" = "code")) %>%
-    select(Group = area, `Milestones` = count, spanish = short_name) %>%
-    select(-spanish) %>% 
-    arrange(desc(`Milestones` )) %>%
-    mutate(`Example milestone` = c(
-        "Stands on their toes",
-        "Finds objects on the floor",
-        "Babbles to imitate conversations",
-        "Complains when play is stopped"
-    )) %>% 
+	filter(paste %in% names(responses_wide)) %>%
+	group_by(area) %>%
+	mutate(count = n()) %>%
+	slice(1) %>%
+	ungroup() %>%
+	left_join(milestones, by = c("paste" = "code")) %>%
+	select(Group = area, `Milestones` = count, spanish = short_name) %>%
+	select(-spanish) %>% 
+	arrange(desc(`Milestones` )) %>%
+	mutate(
+		`Example milestone` = 
+			c(
+				"Stands on their toes",
+				"Finds objects on the floor",
+				"Babbles to imitate conversations",
+				"Complains when play is stopped"
+			)
+		) %>% 
     knitr::kable("latex", caption = "Developmental milestone groups and examples") %>% 
     kableExtra::kable_styling(font_size = 8, latex_options = "hold_position")
 ```
 
 Figure \ref{fig:growth} shows the age (in months) and number of completed milestones for each child. At 12 months old, most children have reached about 200 developmental milestones. At 24 months old, most children have reached about 300 developmental milestones. At 48 months old, most children have reached about 375 of the 414 developmental milestones.
 
-```{r growth, fig.cap = 'Number of milestones by age and percentile curves. Dots represent individual children. ', warning = FALSE}
-source(here::here("data-emailed-from-mike/predictQR_fixed.R"))
-
-by_age <- 
-    d_long %>%
-    group_by(id) %>%
-    summarise(
-        age = age[1], 
-        response = sum(response)
-    )
+```{r growth, fig.cap = 'Number of milestones completed by age with percentile curves. Dots represent individual children.', warning = FALSE}
+source(here("R", "predictQR_fixed.R"))
 
 taus <-  c(0.1, 0.25, 0.5, 0.75, 0.9)
 
-mod <- gcrq(formula = response ~ ps(age, monotone = 1, lambda = 1000), 
-     tau = taus, data = by_age)
+model_perc_curves <- 
+	gcrq(response ~ ps(age, monotone = 1, lambda = 1000), taus, by_age)
 
 the_ages <- 1:55
+
 newdata <- data.frame(age = the_ages)
 
-preds <- predictQR_fixed(mod, newdata = newdata) %>%
-  data.frame %>%
-  mutate(age = the_ages) %>%
-  gather(Percentile, pred, starts_with("X")) %>%
-  mutate(Percentile = as.character(as.numeric(str_replace(Percentile, "X", "")) * 100))
+preds <- 
+	predictQR_fixed(model_perc_curves, newdata = newdata) %>%
+	data.frame() %>%
+	mutate(age = the_ages) %>%
+	gather(Percentile, pred, starts_with("X")) %>%
+	mutate(
+		Percentile = 
+			as.character(as.numeric(str_replace(Percentile, "X", "")) * 100)
+	)
 
-ggplot(by_age, 
-       aes(x = age, y = response)) + 
-  geom_jitter(height = 0, width = 0, alpha = .1) +  # was width = 0.2 and alpha 0.3
-  geom_line(data = preds, aes(x = age, y = pred, col = Percentile, group = Percentile)) + 
-  ylim(0,nrow(milestones)) + 
-  xlim(0,60) + 
-  ylab("Total milestones") + 
-  xlab("Age (in months)") + 
-  ggthemes::scale_color_solarized() + 
-  theme(legend.position = "bottom", 
+by_age %>% 
+	ggplot(aes(x = age, y = response)) + 
+	geom_jitter(height = 0, width = 0, alpha = .1) +  # was width = 0.2 and alpha 0.3
+	geom_line(data = preds, aes(x = age, y = pred, col = Percentile, group = Percentile)) + 
+	ylim(0,nrow(milestones)) + 
+	xlim(0,60) + 
+	ylab("Milestones completed") + 
+	xlab("Age (in months)") + 
+	ggthemes::scale_color_solarized() + 
+	theme(
+		legend.position = "bottom", 
         legend.title = element_text(size = 7),
         legend.text = element_text(size= 7),
-        legend.key.size = unit(0.5, "cm"))
+        legend.key.size = unit(0.5, "cm")
+	)
 ```
 
 # Methods
@@ -173,11 +182,11 @@ We fit five two-parameter logistic (2PL) models where a child’s development is
 $$
 P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbol{a}_{j}^{\top}\boldsymbol{\theta_i} + b_j)
 $$
-where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. As an example, Figure \ref{fig:icc} shows item characteristic curves from the 1F 2PL model for the items in Table \ref{tab:examples}. Item characteristic curves show how $P(y_{ij} = 1)$ changes as $\theta_i$ changes for a particular item. These curves reveal that babbling is unrelated to development. On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
+where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. As an example, Figure \ref{fig:icc} shows item characteristic curves from the 1F 2PL model for the items in Table \ref{tab:example_milestones}. Item characteristic curves show how $P(y_{ij} = 1)$ changes as $\theta_i$ changes for a particular item. These curves reveal that babbling is unrelated to development. On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
 
 We explored 3PL models, which add a guessing parameter to the 2PL model, but they did not fit better and so we omit them for space, preferring instead to look at the more interesting factor structure. We do include a 1F Rasch model where all of the discriminations, $\boldsymbol{a}_{j}$, are set to 1 for each item.
 
-Each of these models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table \ref{tab:examples}. For the bifactor model, the probability of a child having achieved a developmental milestone is 
+Each of these models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table \ref{tab:example_milestones}. For the bifactor model, the probability of a child having achieved a developmental milestone is 
 $$
 P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s + b_j).
 $$
@@ -185,24 +194,24 @@ $$
 Computing is done in R [@rcore], model fitting in the R package mirt [@chalmers2012mirt], and data wrangling/visualization in the set of R packages known as the tidyverse [@tidy].
 
 ```{r icc, fig.cap = "Example item characteristic curves. Babbling is unrelated to a child's development whereas finding objects on the floor is highly related to development."}
-# mirts <- read_rds(here::here("02_mirts.rds"))
-mirts <- read_rds(here::here("02_mirts_2_add_5.rds"))
+# choose items
+a <- which("abs_183" == names(responses_wide)) - 1 # -1 because id column
+b <- which("babbling_23" == names(responses_wide)) - 1
+c <- which("balance_708" == names(responses_wide)) - 1
+d <- which("dindep_78" == names(responses_wide)) - 1
 
-mod <- mirts$model_full[[2]]
-
+# extract probabilities
 traceline <- NULL
-
-a <- which("abs_183" == colnames(d_mat))
-b <- which("babbling_23" == colnames(d_mat))
-c <- which("balance_708" == colnames(d_mat))
-d <- which("dindep_78" == colnames(d_mat))
-
 num <- 1
 for(i in c(a, b, c, d)){
-  extr.2 <- extract.item(mod, i)
-  Theta <- matrix(seq(-4,4, by = .1))
-  traceline[[num]] <- probtrace(extr.2, Theta)
-  num = num + 1
+	extr.2 <- 
+		extract.item(
+			results$model_full[[which(results$factors == "1" & results$itemtype == "2PL")]], 
+			i
+		)
+	Theta <- matrix(seq(-4,4, by = .1))
+	traceline[[num]] <- probtrace(extr.2, Theta)
+	num = num + 1
 }
 
 # rename list
@@ -214,25 +223,21 @@ names(traceline) <-
     "Complains when play is stopped"
   )
 
-# rbind traceline
+# wrangle probabilities
 traceline.df <- do.call(rbind, traceline)
-
-# create item names length based on length of theta provided
-item <- rep(names(traceline),each=length(Theta))
-
-# put them all together into a dataframe
+item <- rep(names(traceline), each = length(Theta))
 l.format <- cbind.data.frame(Theta, item, traceline.df)
+l.format$item <- as.factor(l.format$item)
+aux <- 
+	l.format %>%
+	group_by(item) %>%
+	slice(which.min(abs(P.1-0.5)))
 
-l.format$item<-as.factor(l.format$item)
-aux<-l.format %>%
-  group_by(item) %>%
-  slice(which.min(abs(P.1-0.5))) # We are only using the P.1 column (dichotomous)
+aux <- aux[order(aux$Theta),]
+ord <- as.integer(aux$item)
+l.format$item = factor(l.format$item, levels(l.format$item)[ord])
 
-aux<-aux[order(aux$Theta),]
-ord<-as.integer(aux$item)
-l.format$item = factor(l.format$item,levels(l.format$item)[ord])
-
-# plot chart
+# plot iccs 
 l.format %>% 
   as_tibble() %>% 
   ggplot(aes(Theta, P.1)) + 
@@ -248,7 +253,7 @@ l.format %>%
 
 Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes or misspecification [@mcdonald1995goodness]. Instead, we use a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
 
-Mathematically and following notation similar to @vehtari2017practical, we partition the data into $K$ subsets $y^{(k)}$ for $k = 1, \dots, K$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample or cross-validated) likelihood of $y^{(k)}$ is
+Mathematically and following notation similar to @vehtari2017practical, we partition the data into 6 subsets $y^{(k)}$ for $k = 1, \dots, 6$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample or cross-validated) likelihood of $y^{(k)}$ is
 
 $$
 p(y^{(k)} | y^{(-k)}) = \prod_{i \in i^{(k)}}^{I} \int_\theta \prod_{j=1}^{J} \hat{\text{Pr}}(y_{ij}^{(k)} | \Psi_j^{(-k)}, \theta) g(\theta)d\theta.
@@ -265,31 +270,20 @@ $$
 Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which neccessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison section](#modelcompare). The 3F 2PL model performs best which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
 
 ```{r results}
-# will need latek in kables:
+# for latek in kables
 # https://stackoverflow.com/questions/49416492/latex-formulas-or-symbols-in-table-cells-using-knitr-and-kableextra-in-r-markdow
 
-bifactor <- read_rds(here::here("02_bifactors.rds"))
-
-full <-
-    bind_rows(mirts, bifactor) %>%
-    rename(out_of_sample = ll_person_item) %>%
-    mutate(
-        in_sample = exp(log_lik / nrow(d_mat))^(1/ncol(d_mat))
-    ) %>%
-    mutate(
-        oos =
-            splits_with_log_lik %>% map_dbl(~ sum(.$log_lik_test))
-    ) %>%
-    select(
-        factors, itemtype, in_log_lik = log_lik, in_p = in_sample,
-        out_log_lik = oos, out_p = out_of_sample, model_full, fscores, splits_with_log_lik)
-
-full %>%
-    mutate(npars = model_full %>% map_int(~ .@Model$nestpars)) %>%
-    arrange(npars) %>%
-    mutate(model = c("1F Rasch", "1F 2PL", "2F 2PL", "Bifactor", "*3F 2PL*", "4F 2PL", "5F 2PL")) %>%
-    select(model, parameters = npars, `log-likelihood (in-sample)` = in_log_lik, `lpl y (out-of-sample)` = out_log_lik) %>% 
-  knitr::kable("latex", caption = "Model performance: The 3F 2PL performs best as measured by lpl y") %>% 
+results %>%
+	mutate(npars = model_full %>% map_int(~ .@Model$nestpars)) %>% 
+	arrange(npars) %>%
+	mutate(
+		model = c("1F Rasch", "1F 2PL", "2F 2PL", "Bifactor", "*3F 2PL*", "4F 2PL", "5F 2PL")
+	) %>%
+	select(
+		model, parameters = npars, `log-likelihood (in-sample)` = in_log_lik, 
+		`lpl y (out-of-sample)` = out_log_lik
+	) %>% 
+	knitr::kable("latex", caption = "Model performance: The 3F 2PL performs best as measured by lpl y") %>% 
     kableExtra::kable_styling(font_size = 8, latex_options = "hold_position")
 ```
 
@@ -297,19 +291,22 @@ full %>%
 
 To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor loads mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly load positively on linguistic milestones and, interestingly, negatively on physical milestones. 
 
-```{r, include = FALSE}
-mod3 <- full$model_full[[4]]
-mod3_summary <- summary(mod3, rotate = "varimax")
+```{r getfactorloadings, include = FALSE}
+mod_3F_2PL_summary <- 
+	summary(
+		results$model_full[[which(results$factors == "3")]], 
+		rotate = "varimax"
+	)
+
+mod3_3F_2PL_loadings <-
+    mod_3F_2PL_summary$rotF %>%
+    as_tibble() %>%
+    mutate(paste = row.names(mod_3F_2PL_summary$rotF)) %>%
+    left_join(areas)
 ```
 
 ```{r factorloadings, fig.cap = 'Factor loadings by group'}
-mod3_summary_with_areas <-
-    mod3_summary$rotF %>%
-    as_tibble() %>%
-    mutate(paste = row.names(mod3_summary$rotF)) %>%
-    left_join(areas)
-
-mod3_summary_with_areas %>%
+mod3_3F_2PL_loadings %>%
     select(Group = area, F1, F2, F3) %>%
     rename(`Factor 1` = F1, `Factor 2` = F2, `Factor 3` = F3) %>% 
     gather(var, val, -Group) %>%
@@ -329,17 +326,23 @@ mod3_summary_with_areas %>%
     scale_fill_viridis_d()
 ```
 
-```{r, include = FALSE}
-f <- fscores(mod3, rotate = "varimax")
-tmp <- f %>% as_tibble() %>% mutate(age = ages$age)
+```{r getfactorscores}
+# that last mutate requires ordering to be the same, which it is:
+# all(responses_wide$id == by_age$id)
+
+mod_3F_2PL_fscores <- 
+	fscores(
+		results$model_full[[which(results$factors == "3")]], 
+		rotate = "varimax"
+	) %>% 
+	as_tibble() %>% 
+	mutate(age = by_age$age)
 ```
 
-We also estimate the factor scores for each child using expected a posteriori (EAP) with a three dimensional standard normal distribution [@embretson2013item].  Figure \ref{fig:factorscores} shows the relationship between age and factor score for each factor. The first factor, perhaps unsurprisingly, has a high correlation (r = `r -round(cor(tmp$F1, tmp$age), 2)`) with age. The second factor has a strong association with age from 2 to 16 months but thereafter is unrelated to age. By and large, the third factor does not have any association with age.
+We also estimate the factor scores for each child using expected a posteriori (EAP) with a three dimensional standard normal distribution [@embretson2013item]. Figure \ref{fig:factorscores} shows the relationship between age and factor score for each factor. The first factor, perhaps unsurprisingly, has a high correlation (r = `r abs(round(cor(mod_3F_2PL_fscores$F1, mod_3F_2PL_fscores$age), 2))`) with age. The second factor has a strong association with age from 2 to 16 months but thereafter is unrelated to age. By and large, the third factor does not have any association with age.
 
 ```{r factorscores, fig.cap = 'The first factor is highly associated with age'}
-f %>%
-    as_tibble() %>%
-    mutate(age = ages$age) %>%
+mod_3F_2PL_fscores %>%
     rename(`Factor 1` = F1, `Factor 2` = F2, `Factor 3` = F3) %>% 
     gather(var, val, -age) %>%
     mutate(val = -val) %>%
@@ -363,30 +366,43 @@ Figure \ref{fig:byage} displays the mean cross-validated log likelihood for each
 
 Figure \ref{fig:byage} shows how both the 3F 2PL and bifactor models compare to the 2F 2PL model in terms of cross-validated log likelihood for each age. The 2F 2PL outperforms both models for children younger than 7 months old. For children older than 11 months old, both the 3F 2PL and bifactor models outperform the 2F 2PL model with the 3F 2PL model tending to perform best. 
 
+```{r getbyage, include = FALSE}
+source(here("R", "splits_by_age.R"))
+source(here("R", "calc_log_lik_ghq2_student.R"))
+
+model_by_age <-
+    results %>%
+	mutate(model = c("1F Rasch", "1F 2PL", "2F 2PL", "3F 2PL", "4F 2PL", "5F 2PL", "Bifactor")) %>% 
+    select(model, factors, itemtype, splits_with_log_lik) %>%
+    mutate(oos = splits_with_log_lik %>% map(splits_with_ll_to_oos))
+```
+
 ```{r byage, fig.cap = 'Comparing the 4F 2PL and Bifactor models to the 2F 2PL'}
-read_rds(here::here("03_model_by_age.rds")) %>%
-    filter(model %in% c("2F 2PL", "3F 2PL", "Bifactor")) %>%
-    mutate(model = factor(model, levels = c("2F 2PL", "Bifactor", "3F 2PL"))) %>% 
-    select(model, oos) %>%
-    unnest(oos) %>%
-    mutate(oos = log(oos)) %>%
-    group_by(model, age) %>%
-    summarize(m = mean(oos)) %>%
-    ungroup() %>%
-    spread(model, m) %>% 
-    mutate(`3F 2PL` = `3F 2PL` - `2F 2PL`, Bifactor = Bifactor - `2F 2PL`) %>% 
-    select(-`2F 2PL`) %>% 
-    gather(Model, m, -age) %>% 
-    ggplot(aes(x = age, y = m, color = Model)) +
-    geom_point(size = 0.75) +
-    geom_path(size = 0.35) +
-    geom_hline(yintercept = 0, linetype = "dashed") +
-    labs(x = "Age (in months)", y = "Mean difference in log likelihood") +
-    theme_classic(base_size = 10) + 
-    theme(legend.position = "bottom", 
-            legend.title = element_blank(),
-            legend.text = element_text(size = 8),
-            legend.key.size = unit(0.5, "cm")) +
+model_by_age %>%
+	filter(model %in% c("2F 2PL", "3F 2PL", "Bifactor")) %>%
+	mutate(model = factor(model, levels = c("2F 2PL", "Bifactor", "3F 2PL"))) %>% 
+	select(model, oos) %>%
+	unnest(oos) %>%
+	mutate(oos = log(oos)) %>%
+	group_by(model, age) %>%
+	summarize(m = mean(oos)) %>%
+	ungroup() %>%
+	spread(model, m) %>% 
+	mutate(`3F 2PL` = `3F 2PL` - `2F 2PL`, Bifactor = Bifactor - `2F 2PL`) %>% 
+	select(-`2F 2PL`) %>% 
+	gather(Model, m, -age) %>% 
+	ggplot(aes(x = age, y = m, color = Model)) +
+	geom_point(size = 0.75) +
+	geom_path(size = 0.35) +
+	geom_hline(yintercept = 0, linetype = "dashed") +
+	labs(x = "Age (in months)", y = "Mean difference in log likelihood") +
+	theme_classic(base_size = 10) + 
+	theme(
+		legend.position = "bottom", 
+		legend.title = element_blank(),
+		legend.text = element_text(size = 8),
+		legend.key.size = unit(0.5, "cm")
+	) +
     ggthemes::scale_color_solarized()
 ```
 
@@ -397,10 +413,10 @@ As another method of examining the dimensionality of child development across th
 Figure \ref{fig:partage} shows the results of this analysis. Consistent with our findings in the [previous section](#full), the best fitting model contains a lower dimensional factor structure for younger children. The best fitting model is the 2F 2PL for the partition of data containing children two to 12 months old, whereas the best fitting model is the 3F 2PL for the partitions containing older children.
 
 ```{r partage, fig.cap = '2F 2PL best for young kids; 3F 2PL best for older kids'}
-splits_by_age <- read_rds(here::here("archived/13_splits_by_age.rds"))
+age_partitioned_models <- read_rds(here("data-models", "age_partitioned_models_figshare.rds"))
 
-add_lltest <- function(a){
-  a %>% 
+add_lltest <- function(df){
+  df %>% 
   mutate(
     log_lik_test = 
       splits_with_log_lik %>% 
@@ -408,29 +424,25 @@ add_lltest <- function(a){
   )
 }
 
-b <- splits_by_age %>% 
-  mutate(models2 = models %>% map(add_lltest))
-
-tibble(
-  years = c("2-12 months", "13-24 months", "25-36 months", "37+ months")
-) %>% 
-  mutate(
-    kids = splits_by_age$d_mat_filter %>% map_int(nrow),
-    items = splits_by_age$d_mat_filter %>% map_int(ncol),
-    m  = b$models2
-  ) %>% 
-  unnest() %>% 
-  select(years, kids, items, factors, itemtype, log_lik, log_lik_test) %>% 
-  mutate(var = as_factor(paste0(years, " ", kids, " kids", " ", items, " milestones"))) %>% 
-  filter(itemtype == "2PL") %>% 
-  ggplot(aes(x = factors, y = log_lik_test)) +
-  geom_point() +
-  geom_line(aes(group = years)) +
-  facet_wrap(~ var, ncol = 1, scales = "free") +
-  labs(
-    x = "m-factor 2PL model",
-    y = "Cross-validated log likelihood"
-  ) +
+age_partitioned_models %>% 
+	transmute(
+		years = c("2-12 months", "13-24 months", "25-36 months", "37+ months"),
+		kids = age_partitioned_models$d_mat_filter %>% map_int(nrow),
+		items = age_partitioned_models$d_mat_filter %>% map_int(ncol),
+		models = models %>% map(add_lltest)
+	) %>% 
+	unnest(models) %>% 
+	select(years, kids, items, factors, itemtype, log_lik, log_lik_test) %>% 
+	mutate(var = as_factor(paste0(years, " ", kids, " kids", " ", items, " milestones"))) %>% 
+	filter(itemtype == "2PL") %>% 
+	ggplot(aes(x = factors, y = log_lik_test)) +
+	geom_point() +
+	geom_line(aes(group = years)) +
+	facet_wrap(~ var, ncol = 1, scales = "free") +
+	labs(
+		x = "m-factor 2PL model",
+		y = "Cross-validated log likelihood"
+	) +
   theme_classic(base_size = 8)
 ```
 

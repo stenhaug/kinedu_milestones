@@ -1,2 +1,9 @@
-# kinedu_milestones
-Milestones analysis
+packages needed
+
+data-raw and data-clean
+
+figshare 
+
+
+
+to reproduce...

@@ -1,6 +1,9 @@
+in-progress/
+scratch.R
+BENSNOTES.md
+
 *.Rproj
 .Rproj.user
 *.Rdata
 *.rds
 gd
-reference

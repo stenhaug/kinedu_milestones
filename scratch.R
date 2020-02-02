@@ -1,113 +1,88 @@
-library(tidyverse)
+x <- models_exploratory$model_full[[5]]@Model$Theta %>% as_tibble()
 
-areas <- read_rds("data-clean/areas.rds")
-d <- read_rds("data-clean/d.rds")
-d_mat <- read_rds("data-clean/d_mat.rds")
-item_area <- areas$area[match(colnames(d_mat), areas$paste)]
+x$V1 %>% unique()
 
-ages <-
-    d %>%
-    group_by(id) %>%
-    summarize(age = age[1]) %>%
-    filter(age > 1)
+9 * 9 * 9 * 9
 
-d_mat <- d_mat[row.names(d_mat) %in% ages$id, ]
+factors <- 5
+itemtype = "2PL"
+splits_df <- splits_response_matrix
 
-d <- d %>% filter(age > 1)
+verbose = TRUE
 
-# d_mat %>% apply(1, function(x) mean(is.na(x))) %>% table()
+n_cycles <- 10
 
-# d_mat %>% apply(2, function(x) mean(is.na(x))) %>% table()
+the_method <- "MCEM"
 
-milestones <-
-    d_raw %>%
-    select(abs_183:color_679) %>%
-    slice(3) %>%
-    gather(code, name) %>%
-    mutate(short_name = str_sub(name, start = 0, end = 40),
-           code = str_replace(code, "^d_","d"),
-           code = str_replace(code, "^e_","")) %>%
-    mutate(code2 = code) %>%
-    separate(code2, into = c("category","number")) %>%
-    select(-number)
+x <- splits_df %>%
+	mutate(
+		model =
+			splits %>%
+			map(
+				~ list(
+					data = training(.),
+					model = fix_factors(factors),
+					itemtype = itemtype,
+					TOL = 0.0002, # could crank
+					technical = list(theta_lim = c(-6, 6), NCYCLES = n_cycles),
+					verbose = verbose,
+					method = the_method
+				)
+			) %>%
+			map(~ do.call(mirt, .)))
 
-ms <- milestones %>% mutate(code = str_remove(code, " "))
+splits <- x$splits[[1]]
+model <- x$model[[1]]
 
-areas %>%
-    filter(paste %in% colnames(d_mat)) %>%
-    group_by(area) %>%
-    mutate(count = n()) %>%
-    slice(1) %>%
-    ungroup() %>%
-    left_join(ms, by = c("paste" = "code")) %>%
-    select(group = area, count, spanish = short_name) %>%
-    arrange(desc(count)) %>%
-    mutate(english = c(
-        "Can stand on their toes",
-        "Can find an object on the floor",
-        "Babbles as if imitating conversations",
-        "Complains when their activity is interrupted"
-    )) %>%
-    View()
+data <- testing(splits)
 
-areas %>%
-    filter(paste %in% colnames(d_mat)) %>%
-    group_by(area) %>%
-    mutate(count = n()) %>%
-    slice(1) %>%
-    ungroup() %>%
-    left_join(ms, by = c("paste" = "code")) %>%
-    select(group = area, count, spanish = short_name) %>%
-    arrange(desc(count)) %>%
-    mutate(english = c(
-        "Can stand on their toes",
-        "Can find an object on the floor",
-        "Babbles as if imitating conversations",
-        "Complains when their activity is interrupted"
-    ))
+calc_log_lik_ghq2(model, testing(splits))
 
-mod3 <- mirt(d_mat, 3, "2PL")
+x %>%
+	mutate(
+		log_lik_test =
+			map2_dbl(
+				splits,
+				model,
+				~ calc_log_lik_ghq2(.y, testing(.x))
+			)
+	)
 
-mod3 %>% write_rds("scratch_mod3.rds")
+if(!is.null(model@Internals$bfactor$specific)){
 
-x <- summary(mod3, rotate = "varimax")
+	print("using bifactor loglik")
 
-ms
+	mirt:::Estep.bfactor(
+		pars=model@ParObjects$pars,
+		tabdata=make_fulldata(data),
+		freq=rep(1, nrow(data)),
+		Theta=model@Model$Theta,
+		prior=model@Internals$bfactor$prior[[1]],
+		Priorbetween=model@Internals$bfactor$Priorbetween[[1]],
+		specific=model@Internals$bfactor$specific,
+		sitems=model@Internals$bfactor$sitems,
+		itemloc=model@Model$itemloc,
+		CUSTOM.IND=model@Internals$CUSTOM.IND,
+		Etable=TRUE
+	)$expected %>%
+		log() %>%
+		sum(na.rm = TRUE)
+} else {
 
-what <-
-    x$rotF %>%
-    as_tibble() %>%
-    mutate(paste = row.names(x$rotF)) %>%
-    left_join(areas)
+	print("using mirt loglik")
 
-what %>%
-    select(Group = area, F1, F2, F3) %>%
-    gather(var, val, -Group) %>%
-    mutate(val = -val) %>%
-    ggplot(aes(x = val, fill = Group)) +
-    ggridges::geom_density_line(alpha = 0.5) +
-    facet_wrap(~ var, ncol = 1) +
-    labs(
-        x = "Item discrimination (or slope)",
-        y = "Density",
-        title = "Milestone loadings by factor"
-    )
+	mirt:::Estep.mirt(
+		pars = model@ParObjects$pars,
+		tabdata = make_fulldata(data),
+		freq = rep(1, nrow(data)),
+		CUSTOM.IND = model@Internals$CUSTOM.IND,
+		Theta = model@Model$Theta,
+		prior = model@Internals$Prior[[1]],
+		itemloc = model@Model$itemloc,
+		full = FALSE,
+		Etable = TRUE
+	)$expected %>%
+		log() %>%
+		sum(na.rm = TRUE)
+}
 
-f <- fscores(mod3, rotate = "varimax")
-
-f %>%
-    as_tibble() %>%
-    mutate(age = ages$age) %>%
-    gather(var, val, -age) %>%
-    mutate(val = -val) %>%
-    ggplot(aes(x = age, y = val)) +
-    geom_point(alpha = 0.1) +
-    facet_wrap(~ var, ncol = 1) +
-    geom_smooth(method = "lm") +
-    labs(
-        x = "Age (in months)",
-        y = "Factor score",
-        title = "The first factor is highly associated with age"
-    )
-
-mean(row.names(d_mat) == ages$id)

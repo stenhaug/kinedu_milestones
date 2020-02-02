@@ -12,7 +12,7 @@ factors_itemtype_splits_df_to_splits_with_log_lik <-
 							TOL = 0.0002, # could crank
 							technical = list(theta_lim = c(-6, 6), NCYCLES = n_cycles),
 							verbose = verbose,
-							method = the_method
+							method = the_method # only works with EM i believe because otherwise computeItemTrace doesn't have a Theta prior set
 						)
 					) %>%
 					map(~ do.call(mirt, .)),

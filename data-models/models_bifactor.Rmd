@@ -12,7 +12,7 @@ library(mirt)
 mirtCluster()
 library(rsample)
 
-source(here("R", "calc_log_lik_ghq2_student.R"))
+source(here("R", "calc_log_lik_ghq2.R"))
 source(here("R", "fix_factors.R"))
 source(here("R", "bifactor_factors_itemtype_splits_df_to_splits_with_log_lik.R"))
 ```
@@ -41,6 +41,8 @@ responses_matrix <-
 	select(-id) %>% 
 	as.matrix()
 
+# MAKE SMALL TO TEST: responses_matrix <- responses_matrix[1:100, 1:10]
+
 # need to match areas to the responses_matrix order
 areas <- 
 	areas %>% 
@@ -48,8 +50,8 @@ areas <-
 	mutate(where_in_mat = match(paste, colnames(responses_matrix))) %>% 
 	arrange(where_in_mat)
 
-# here is our double check
-all(areas2$paste == colnames(responses_matrix))
+# double check that matching worked
+all(areas$paste == colnames(responses_matrix))
 ```
 
 randomly split data
@@ -74,7 +76,7 @@ models_bifactors <-
 			),
 		log_lik = map_dbl(model_full, logLik),
 		n_pars = map_int(model_full, ~ length(.@Internals$shortpars)),
-		fscores = map(model_full, fscores)
+		fscores = map(model_full, fscores, QMC = TRUE)
     ) %>% 
 	mutate(
 		splits_with_log_lik = 
@@ -82,8 +84,8 @@ models_bifactors <-
 				factors, 
 				bifactor_factors_splits_df_to_splits_with_log_lik, 
 				splits_response_matrix,
-				n_cycles = 500,
-                verbose = FALSE
+				n_cycles = 500, 
+                verbose = TRUE
             )
 	) %>% 
     mutate(
@@ -97,5 +99,5 @@ models_bifactors <-
 output
 
 ```{r}
-models_bifactors %>% write_rds(here("data-models", "models_bifactors.rds"))
+models_bifactors %>% write_rds(here("data-models", "models_bifactor.rds"))
 ```

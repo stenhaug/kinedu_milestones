@@ -272,11 +272,14 @@ other hand, finding objects on the floor is highly related to
 development with most children with \(\theta_i\) greater than -1.5
 having reached this milestone.
 
-We explored 3PL models, which add a guessing parameter to the 2PL model,
-but they did not fit better and so we omit them for space, preferring
-instead to look at the more interesting factor structure. We do include
-a 1F Rasch model where all of the discriminations,
-\(\boldsymbol{a}_{j}\), are set to 1 for each item.
+We primarily focus here on the latent factor structure of children's
+ability, but we also examined the structure of individual item models.
+While we use a 2PL model here (which includes difficulty and
+discrimination parameters), we also explored 3PL models (which add a
+guessing parameter for each item). Overall, 3PL models did not fit
+better than 2PL models and so we omit them in the interest of space. For
+comparison, we do include a 1F Rasch model where all of the
+discrimination parameters, \(a_j\), are set to 1 for each item.
 
 Each of these models learn the latent factor structure entirely from the
 data, making them exploratory. The bifactor model offers an alternative
@@ -352,19 +355,19 @@ ages of 2 and 55 months follows a multidimensional path.
 \hline
 model & parameters & log-likelihood (in-sample) & lpl y (out-of-sample)\\
 \hline
-1F Rasch & 415 & -254983.9 & -255441.5\\
+1F Rasch & 415 & -254984 & -255442\\
 \hline
-1F 2PL & 828 & -222072.9 & -223105.6\\
+1F 2PL & 828 & -222073 & -223106\\
 \hline
-2F 2PL & 1241 & -212896.4 & -214491.4\\
+2F 2PL & 1241 & -212896 & -214491\\
 \hline
-Bifactor & 1242 & -210030.2 & -211682.2\\
+Bifactor & 1242 & -210030 & -211682\\
 \hline
-*3F 2PL* & 1653 & -208806.0 & -210960.5\\
+*3F 2PL* & 1653 & -208806 & -210961\\
 \hline
-4F 2PL & 2064 & -208113.9 & -211022.8\\
+4F 2PL & 2064 & -208114 & -211023\\
 \hline
-5F 2PL & 2474 & -207316.2 & -211036.3\\
+5F 2PL & 2474 & -207316 & -211036\\
 \hline
 \end{tabular}
 \end{table}
@@ -379,13 +382,17 @@ To understand each of the three factors in the best performing model, we
 fit the model to the the full dataset. We then estimate the factor
 loadings (i.e.~discriminations or slopes) using a varimax rotation. The
 varimax rotation results in orthogonal and, therefore, more
-interpretable factors (Kaiser, 1959). Figure \ref{fig:factorloadings}
-shows the distribution of factor loadings for each group on each of the
-three factors. The first factor loads mainly on cognitive and linguistic
-milestones. The second factor is a combination of each of the groups
-with the strongest loadings on the physical and social \& emotional
-milestones. The third mainly load positively on linguistic milestones
-and, interestingly, negatively on physical milestones.
+interpretable factors (Kaiser, 1959). Under the varimax rotation, the
+first factor explains 41\% of the variance, the second factor explains
+16\% of the variance, and the third factor explains 3\% of the variance.
+
+Figure \ref{fig:factorloadings} shows the distribution of factor
+loadings for each group on each of the three factors. The first factor
+loads mainly on cognitive and linguistic milestones. The second factor
+is a combination of each of the groups with the strongest loadings on
+the physical and social \& emotional milestones. The third mainly load
+positively on linguistic milestones and, interestingly, negatively on
+physical milestones.
 
 \begin{CodeChunk}
 \begin{figure}[tb]
@@ -393,14 +400,14 @@ and, interestingly, negatively on physical milestones.
 \end{figure}
 \end{CodeChunk}
 
-We also estimate the factor scores for each child using expected a
-posteriori (EAP) with a three dimensional standard normal distribution
-(Embretson \& Reise, 2013). Figure \ref{fig:factorscores} shows the
-relationship between age and factor score for each factor. The first
-factor, perhaps unsurprisingly, has a high correlation (r = 0.9) with
-age. The second factor has a strong association with age from 2 to 16
-months but thereafter is unrelated to age. By and large, the third
-factor does not have any association with age.
+We estimate the factor scores for each child using expected a posteriori
+(EAP) with a three dimensional standard normal distribution (Embretson
+\& Reise, 2013). Figure \ref{fig:factorscores} shows the relationship
+between age and factor score for each factor. The first factor, perhaps
+unsurprisingly, has a high correlation (r = 0.9) with age. The second
+factor has a strong association with age from 2 to 16 months but
+thereafter is unrelated to age. By and large, the third factor does not
+have any association with age.
 
 \begin{CodeChunk}
 \begin{figure}[tb]
@@ -422,8 +429,10 @@ of each of the models by age. Second, we partition the data by age and
 use the same cross-validation procedure to find the best fitting model
 in each partition.
 
+\vskip 0.1in
+
 \hypertarget{full}{%
-\subsection{Full model}\label{full}}
+\subsubsection{Full model}\label{full}}
 
 Figure \ref{fig:byage} displays the mean cross-validated log likelihood
 for each model by age, which comes from the k-fold cross-validation
@@ -447,8 +456,10 @@ model tending to perform best.
 \end{figure}
 \end{CodeChunk}
 
+\vskip 0.1in
+
 \hypertarget{age-partitioned-models}{%
-\subsection{Age-partitioned models}\label{age-partitioned-models}}
+\subsubsection{Age-partitioned models}\label{age-partitioned-models}}
 
 As another method of examining the dimensionality of child development
 across the age span, we create four partitions of the data based on the

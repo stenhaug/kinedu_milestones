@@ -2,7 +2,8 @@
 .Rproj.user
 *.Rproj
 *.Rdata
-*.rds
+
+data-models/
 
 gd/
 

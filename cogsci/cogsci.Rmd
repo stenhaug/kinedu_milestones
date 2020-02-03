@@ -184,7 +184,7 @@ P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbo
 $$
 where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. As an example, Figure \ref{fig:icc} shows item characteristic curves from the 1F 2PL model for the items in Table \ref{tab:example_milestones}. Item characteristic curves show how $P(y_{ij} = 1)$ changes as $\theta_i$ changes for a particular item. These curves reveal that babbling is unrelated to development. On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
 
-We explored 3PL models, which add a guessing parameter to the 2PL model, but they did not fit better and so we omit them for space, preferring instead to look at the more interesting factor structure. We do include a 1F Rasch model where all of the discriminations, $\boldsymbol{a}_{j}$, are set to 1 for each item.
+We primarily focus here on the latent factor structure of children's ability, but we also examined the structure of individual item models. While we use a 2PL model here (which includes difficulty and discrimination parameters), we also explored 3PL models (which add a guessing parameter for each item). Overall, 3PL models did not fit better than 2PL models and so we omit them in the interest of space. For comparison, we do include a 1F Rasch model where all of the discrimination parameters, $a_j$, are set to 1 for each item.
 
 Each of these models learn the latent factor structure entirely from the data, making them exploratory. The bifactor model offers an alternative specification where each milestone loads onto a general factor $\theta_0$ and a specific factor $\theta_s$ [@cai2011generalized]. The assignment of each developmental milestone to its specific factor is an opportunity to specify the latent factor structure, making the model confirmatory as opposed to exploratory. We map each milestone to its specific factor according to the four developmental milestone groups shown in Table \ref{tab:example_milestones}. For the bifactor model, the probability of a child having achieved a developmental milestone is 
 $$
@@ -277,7 +277,9 @@ results %>%
 	mutate(npars = model_full %>% map_int(~ .@Model$nestpars)) %>% 
 	arrange(npars) %>%
 	mutate(
-		model = c("1F Rasch", "1F 2PL", "2F 2PL", "Bifactor", "*3F 2PL*", "4F 2PL", "5F 2PL")
+		model = c("1F Rasch", "1F 2PL", "2F 2PL", "Bifactor", "*3F 2PL*", "4F 2PL", "5F 2PL"),
+		in_log_lik = round(in_log_lik),
+		out_log_lik = round(out_log_lik)
 	) %>%
 	select(
 		model, parameters = npars, `log-likelihood (in-sample)` = in_log_lik, 
@@ -289,7 +291,9 @@ results %>%
 
 ## Understanding the latent factor structure
 
-To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor loads mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly load positively on linguistic milestones and, interestingly, negatively on physical milestones. 
+To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Under the varimax rotation, the first factor explains 41% of the variance, the second factor explains 16% of the variance, and the third factor explains 3% of the variance.
+
+Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor loads mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly load positively on linguistic milestones and, interestingly, negatively on physical milestones. 
 
 ```{r getfactorloadings, include = FALSE}
 mod_3F_2PL_summary <- 
@@ -339,7 +343,7 @@ mod_3F_2PL_fscores <-
 	mutate(age = by_age$age)
 ```
 
-We also estimate the factor scores for each child using expected a posteriori (EAP) with a three dimensional standard normal distribution [@embretson2013item]. Figure \ref{fig:factorscores} shows the relationship between age and factor score for each factor. The first factor, perhaps unsurprisingly, has a high correlation (r = `r abs(round(cor(mod_3F_2PL_fscores$F1, mod_3F_2PL_fscores$age), 2))`) with age. The second factor has a strong association with age from 2 to 16 months but thereafter is unrelated to age. By and large, the third factor does not have any association with age.
+We estimate the factor scores for each child using expected a posteriori (EAP) with a three dimensional standard normal distribution [@embretson2013item]. Figure \ref{fig:factorscores} shows the relationship between age and factor score for each factor. The first factor, perhaps unsurprisingly, has a high correlation (r = `r abs(round(cor(mod_3F_2PL_fscores$F1, mod_3F_2PL_fscores$age), 2))`) with age. The second factor has a strong association with age from 2 to 16 months but thereafter is unrelated to age. By and large, the third factor does not have any association with age.
 
 ```{r factorscores, fig.cap = 'The first factor is highly associated with age'}
 mod_3F_2PL_fscores %>%
@@ -358,9 +362,11 @@ mod_3F_2PL_fscores %>%
 
 ## Dimensionality across the age-span
 
-For the entire dataset, we’ve shown evidence that the 2PL model with 3-factors performs best. But is this latent factor dimensionality consistent across age-span? For example, perhaps for very young children 1-factor is sufficient and then later on 2- and then 3-factors become valuable. We take two approaches to assessing the dimensionality of child development across the age-span. First, we examine the performance of each of the models by age. Second, we partition the data by age and use the same cross-validation procedure to find the best fitting model in each partition.
+For the entire dataset, we’ve shown evidence that the 2PL model with 3-factors performs best. But is this latent factor dimensionality consistent across age-span? For example, perhaps for very young children 1-factor is sufficient and then later on 2- and then 3-factors become valuable. We take two approaches to assessing the dimensionality of child development across the age-span. First, we examine the performance of each of the models by age. Second, we partition the data by age and use the same cross-validation procedure to find the best fitting model in each partition.  
 
-## Full model {#full}
+\vskip 0.1in
+
+### Full model {#full}
 
 Figure \ref{fig:byage} displays the mean cross-validated log likelihood for each model by age, which comes from the k-fold cross-validation described in the [model comparison](#modelcompare) section. For each student, we calculate the marginalized out-of-sample likelihood based on the item parameters $\Psi_j^{(-k)}$ from fitting the model to $y^{(-k)}$, the folds of data that do not include the student. As a reminder, students are assigned to folds randomly and not by age. 
 
@@ -368,7 +374,7 @@ Figure \ref{fig:byage} shows how both the 3F 2PL and bifactor models compare to 
 
 ```{r getbyage, include = FALSE}
 source(here("R", "splits_by_age.R"))
-source(here("R", "calc_log_lik_ghq2_student.R"))
+source(here("R", "calc_log_lik_ghq2.R"))
 
 model_by_age <-
     results %>%
@@ -406,7 +412,9 @@ model_by_age %>%
     ggthemes::scale_color_solarized()
 ```
 
-## Age-partitioned models
+\vskip 0.1in
+
+### Age-partitioned models
 
 As another method of examining the dimensionality of child development across the age span, we create four partitions of the data based on the ages of the children. We then cross-validate the 2PL models independently in each partition. This allows us to examine the dimensionality for each age group separately. For each age partition, we drop milestones where less than 2.5% or greater than 97.5% of children have reached the milestone. We drop these milestones because they contain little information and make the models less stable. This process results in, for example, 432 children and 359 milestones in the 13-24 month old partition.
 

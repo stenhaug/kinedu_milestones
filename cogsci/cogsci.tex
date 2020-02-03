@@ -202,18 +202,15 @@ translated to English.
 \caption{\label{tab:example_milestones}Developmental milestone groups and examples}
 \centering
 \fontsize{8}{10}\selectfont
-\begin{tabular}[t]{l|r|l}
-\hline
+\begin{tabular}[t]{lrl}
+\toprule
 Group & Milestones & Example milestone\\
-\hline
+\midrule
 Physical & 180 & Stands on their toes\\
-\hline
 Cognitive & 100 & Finds objects on the floor\\
-\hline
 Linguistic & 75 & Babbles to imitate conversations\\
-\hline
 Social \& Emotional & 59 & Complains when play is stopped\\
-\hline
+\bottomrule
 \end{tabular}
 \end{table}
 
@@ -242,7 +239,7 @@ model comparison question.
 \subsection{Models}\label{models}}
 
 Item response theory offers a suite of models with which to model item
-response data. We adopt the notation used in Chalmers \& al. (2012). Let
+response data. We adopt the notation used in Chalmers (2012). Let
 \(i = 1, \ldots, I\) represent the distinct children and
 \(j = 1, \ldots, J\) the developmental milestones. The item response
 data is stored in a matrix, \(y\), where element \(y_{ij}\) denotes if
@@ -267,10 +264,12 @@ As an example, Figure \ref{fig:icc} shows item characteristic curves
 from the 1F 2PL model for the items in Table
 \ref{tab:example_milestones}. Item characteristic curves show the
 relationship between \(\theta_i\) and \(P(y_{ij} = 1)\) for a particular
-item. These curves reveal that babbling is unrelated to development. On
-the other hand, finding objects on the floor is highly related to
-development with most children with \(\theta_i\) greater than -1.5
-having reached this milestone.
+item. These curves reveal that babbling is unrelated to development
+(presumably because parents interpret babbling as including early cooing
+and hence report that essentially all babies babble). On the other hand,
+finding objects on the floor is highly related to development with most
+children with \(\theta_i\) greater than -1.5 having reached this
+milestone.
 
 We primarily focus here on the latent factor structure of children's
 ability, but we also examined the structure of individual item models.
@@ -296,8 +295,8 @@ P(y_{ij} = 1 | \theta_0, \theta_s, a_0, a_s) = \sigma(a_0\theta_0 + a_s\theta_s 
 \]
 
 Computing is done in R (R Core Team, 2019), model fitting in the R
-package mirt (Chalmers \& al., 2012), and data wrangling/visualization
-in the set of R packages known as the tidyverse (Wickham, 2017).
+package mirt (Chalmers, 2012), and data wrangling/visualization in the
+set of R packages known as the tidyverse (Wickham, 2017).
 
 \begin{CodeChunk}
 \begin{figure}[tb]
@@ -318,8 +317,8 @@ Then for each fold, we estimate the item parameters using all but that
 fold, and calculate the likelihood of that fold by integrating over
 \(g(\theta)\).
 
-Mathematically and following notation similar to Vehtari, Gelman, \&
-Gabry (2017), we partition the data into 6 subsets \(y^{(k)}\) for
+Mathematically --- following notation similar to Vehtari, Gelman, \&
+Gabry (2017) --- we partition the data into 6 subsets \(y^{(k)}\) for
 \(k = 1, \dots, 6\). Each model is fit separately to each training set
 \(y^{(-k)}\) yielding item parameter estimates which we compactly denote
 \(\Psi_j^{(-k)}\). The predictive (i.e.~out-of-sample or
@@ -343,8 +342,8 @@ Table \ref{tab:results} shows the number of parameters, the in-sample
 log likelihood (which necessarily increases with more parameters), and
 the \(\text{lpl } y\) defined in the
 \protect\hyperlink{modelcompare}{model comparison section}. The 3F 2PL
-model performs best which is evidence that child development between the
-ages of 2 and 55 months follows a multidimensional path.
+model performs best, which is evidence that child development between
+the ages of 2 and 55 months follows a multidimensional path.
 
 \begin{CodeChunk}
 \begin{table}[!h]
@@ -352,24 +351,18 @@ ages of 2 and 55 months follows a multidimensional path.
 \caption{\label{tab:results}Model performance: The 3F 2PL performs best as measured by lpl y}
 \centering
 \fontsize{8}{10}\selectfont
-\begin{tabular}[t]{l|r|r|r}
-\hline
-model & parameters & log-likelihood (in-sample) & lpl y (out-of-sample)\\
-\hline
+\begin{tabular}[t]{lrrr}
+\toprule
+Model & Parameters & log-likelihood (in-sample) & lpl y (out-of-sample)\\
+\midrule
 1F Rasch & 415 & -254984 & -255442\\
-\hline
 1F 2PL & 828 & -222073 & -223106\\
-\hline
 2F 2PL & 1241 & -212896 & -214491\\
-\hline
 Bifactor & 1242 & -210030 & -211682\\
-\hline
 *3F 2PL* & 1653 & -208806 & -210961\\
-\hline
 4F 2PL & 2064 & -208114 & -211023\\
-\hline
 5F 2PL & 2474 & -207316 & -211036\\
-\hline
+\bottomrule
 \end{tabular}
 \end{table}
 
@@ -380,7 +373,7 @@ Bifactor & 1242 & -210030 & -211682\\
 structure}\label{understanding-the-latent-factor-structure}}
 
 To understand each of the three factors in the best performing model, we
-fit the model to the the full dataset. We then estimate the factor
+fit the model to the the full dataset. We then estimated the factor
 loadings (i.e.~discriminations or slopes) using a varimax rotation. The
 varimax rotation results in orthogonal and, therefore, more
 interpretable factors (Kaiser, 1959). Under the varimax rotation, the
@@ -420,10 +413,10 @@ have any association with age.
 \subsection{Dimensionality across the
 age-span}\label{dimensionality-across-the-age-span}}
 
-For the entire dataset, we've shown evidence that the 2PL model with
-3-factors performs best. But is this latent factor dimensionality
-consistent across age-span? For example, perhaps for very young children
-1-factor is sufficient and then later on 2- and then 3-factors become
+For the entire dataset, we've shown evidence that the 2PL model with 3
+factors performs best. But is this latent factor dimensionality
+consistent across age? For example, perhaps for very young children
+1-factor is sufficient and then later on 2 and then 3 factors become
 valuable. We take two approaches to assessing the dimensionality of
 child development across the age-span. First, we examine the performance
 of each of the models by age. Second, we partition the data by age and
@@ -465,7 +458,7 @@ model tending to perform best.
 As another method of examining the dimensionality of child development
 across the age span, we create four partitions of the data based on the
 ages of the children. We then cross-validate the 2PL models
-independently in each partition. This allows us to examine the
+independently in each partition. This analysis allows us to examine the
 dimensionality for each age group separately. For each age partition, we
 drop milestones where less than 2.5\% or greater than 97.5\% of children
 have reached the milestone because they contain little information and
@@ -577,9 +570,9 @@ Cai, L., Yang, J. S., \& Hansen, M. (2011). Generalized full-information
 item bifactor analysis. \emph{Psychological Methods}, \emph{16}(3), 221.
 
 \leavevmode\hypertarget{ref-chalmers2012mirt}{}%
-Chalmers, R. P., \& al. (2012). Mirt: A multidimensional item response
-theory package for the r environment. \emph{Journal of Statistical
-Software}, \emph{48}(6), 1--29.
+Chalmers, R. P. (2012). Mirt: A multidimensional item response theory
+package for the r environment. \emph{Journal of Statistical Software},
+\emph{48}(6), 1--29.
 
 \leavevmode\hypertarget{ref-embretson2013item}{}%
 Embretson, S. E., \& Reise, S. P. (2013). \emph{Item response theory}.

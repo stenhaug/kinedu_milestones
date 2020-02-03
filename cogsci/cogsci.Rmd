@@ -125,7 +125,7 @@ areas %>%
 				"Complains when play is stopped"
 			)
 		) %>% 
-    knitr::kable("latex", caption = "Developmental milestone groups and examples") %>% 
+    knitr::kable("latex", caption = "Developmental milestone groups and examples", booktabs = TRUE) %>% 
     kableExtra::kable_styling(font_size = 8, latex_options = "hold_position")
 ```
 
@@ -182,7 +182,7 @@ We fit five two-parameter logistic (2PL) models where a child’s development is
 $$
 P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbol{a}_{j}^{\top}\boldsymbol{\theta_i} + b_j)
 $$
-where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. As an example, Figure \ref{fig:icc} shows item characteristic curves from the 1F 2PL model for the items in Table \ref{tab:example_milestones}. Item characteristic curves show the relationship between $\theta_i$ and $P(y_{ij} = 1)$ for a particular item. These curves reveal that babbling is unrelated to development. On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
+where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. As an example, Figure \ref{fig:icc} shows item characteristic curves from the 1F 2PL model for the items in Table \ref{tab:example_milestones}. Item characteristic curves show the relationship between $\theta_i$ and $P(y_{ij} = 1)$ for a particular item. These curves reveal that babbling is unrelated to development (presumably because parents interpret babbling as including early cooing and hence report that essentially all babies babble). On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
 
 We primarily focus here on the latent factor structure of children's ability, but we also examined the structure of individual item models. While we use a 2PL model here (which includes difficulty and discrimination parameters), we also explored 3PL models (which add a guessing parameter for each item). Overall, 3PL models did not fit better than 2PL models and so we omit them in the interest of space. For comparison, we do include a 1F Rasch model where all of the discrimination parameters, $a_j$, are set to 1 for each item.
 
@@ -253,7 +253,7 @@ l.format %>%
 
 Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes or when the models are misspecified [@mcdonald1995goodness]. Instead, we use a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
 
-Mathematically and following notation similar to @vehtari2017practical, we partition the data into 6 subsets $y^{(k)}$ for $k = 1, \dots, 6$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample or cross-validated) likelihood of $y^{(k)}$ is
+Mathematically — following notation similar to @vehtari2017practical — we partition the data into 6 subsets $y^{(k)}$ for $k = 1, \dots, 6$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample or cross-validated) likelihood of $y^{(k)}$ is
 
 $$
 p(y^{(k)} | y^{(-k)}) = \prod_{i \in i^{(k)}}^{I} \int_\theta \prod_{j=1}^{J} \hat{\text{Pr}}(y_{ij}^{(k)} | \Psi_j^{(-k)}, \theta) g(\theta)d\theta.
@@ -267,7 +267,7 @@ $$
 
 # Results
 
-Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which necessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison section](#modelcompare). The 3F 2PL model performs best which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
+Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which necessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison section](#modelcompare). The 3F 2PL model performs best, which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
 
 ```{r results}
 # for latek in kables
@@ -277,21 +277,21 @@ results %>%
 	mutate(npars = model_full %>% map_int(~ .@Model$nestpars)) %>% 
 	arrange(npars) %>%
 	mutate(
-		model = c("1F Rasch", "1F 2PL", "2F 2PL", "Bifactor", "*3F 2PL*", "4F 2PL", "5F 2PL"),
+		Model = c("1F Rasch", "1F 2PL", "2F 2PL", "Bifactor", "*3F 2PL*", "4F 2PL", "5F 2PL"),
 		in_log_lik = round(in_log_lik),
 		out_log_lik = round(out_log_lik)
 	) %>%
 	select(
-		model, parameters = npars, `log-likelihood (in-sample)` = in_log_lik, 
+		Model, Parameters = npars, `log-likelihood (in-sample)` = in_log_lik, 
 		`lpl y (out-of-sample)` = out_log_lik
 	) %>% 
-	knitr::kable("latex", caption = "Model performance: The 3F 2PL performs best as measured by lpl y") %>% 
+	knitr::kable("latex", booktabs = TRUE, linesep = "", caption = "Model performance: The 3F 2PL performs best as measured by lpl y") %>% 
     kableExtra::kable_styling(font_size = 8, latex_options = "hold_position")
 ```
 
 ## Understanding the latent factor structure
 
-To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Under the varimax rotation, the first factor explains 41% of the variance, the second factor explains 16% of the variance, and the third factor explains 3% of the variance.
+To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimated the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Under the varimax rotation, the first factor explains 41% of the variance, the second factor explains 16% of the variance, and the third factor explains 3% of the variance.
 
 Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor loads mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third factor mainly loads positively on linguistic milestones and, interestingly, negatively on physical milestones. 
 
@@ -362,7 +362,7 @@ mod_3F_2PL_fscores %>%
 
 ## Dimensionality across the age-span
 
-For the entire dataset, we’ve shown evidence that the 2PL model with 3-factors performs best. But is this latent factor dimensionality consistent across age-span? For example, perhaps for very young children 1-factor is sufficient and then later on 2- and then 3-factors become valuable. We take two approaches to assessing the dimensionality of child development across the age-span. First, we examine the performance of each of the models by age. Second, we partition the data by age and use the same cross-validation procedure to find the best fitting model in each partition.  
+For the entire dataset, we’ve shown evidence that the 2PL model with 3 factors performs best. But is this latent factor dimensionality consistent across age? For example, perhaps for very young children 1-factor is sufficient and then later on 2 and then 3 factors become valuable. We take two approaches to assessing the dimensionality of child development across the age-span. First, we examine the performance of each of the models by age. Second, we partition the data by age and use the same cross-validation procedure to find the best fitting model in each partition.  
 
 \vskip 0.1in
 
@@ -416,7 +416,7 @@ model_by_age %>%
 
 ### Age-partitioned models
 
-As another method of examining the dimensionality of child development across the age span, we create four partitions of the data based on the ages of the children. We then cross-validate the 2PL models independently in each partition. This allows us to examine the dimensionality for each age group separately. For each age partition, we drop milestones where less than 2.5% or greater than 97.5% of children have reached the milestone because they contain little information and make the models less stable. This process results in, for example, 432 children and 359 milestones in the 13-24 month old partition.
+As another method of examining the dimensionality of child development across the age span, we create four partitions of the data based on the ages of the children. We then cross-validate the 2PL models independently in each partition. This analysis allows us to examine the dimensionality for each age group separately. For each age partition, we drop milestones where less than 2.5% or greater than 97.5% of children have reached the milestone because they contain little information and make the models less stable. This process results in, for example, 432 children and 359 milestones in the 13-24 month old partition.
 
 Figure \ref{fig:partage} shows the results of this analysis. Consistent with our findings in the [previous section](#full), the best fitting model contains a lower dimensional factor structure for younger children. The best fitting model is the 2F 2PL for the partition of data containing children two to 12 months old, whereas the best fitting model is the 3F 2PL for the partitions containing older children.
 
@@ -484,3 +484,4 @@ The nature of developmental variation is of core importance to our theorizing ab
 \setlength{\parindent}{-0.1in} 
 \setlength{\leftskip}{0.125in}
 \noindent
+

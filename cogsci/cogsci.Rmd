@@ -182,7 +182,7 @@ We fit five two-parameter logistic (2PL) models where a child’s development is
 $$
 P(y_{ij} = 1 | \boldsymbol{\theta_i}, \boldsymbol{a_j}, b_j) = \sigma(\boldsymbol{a}_{j}^{\top}\boldsymbol{\theta_i} + b_j)
 $$
-where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. As an example, Figure \ref{fig:icc} shows item characteristic curves from the 1F 2PL model for the items in Table \ref{tab:example_milestones}. Item characteristic curves show how $P(y_{ij} = 1)$ changes as $\theta_i$ changes for a particular item. These curves reveal that babbling is unrelated to development. On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
+where $b_j$ is the milestone easiness (i.e. intercept) and $\sigma(x) = \frac{e^x}{e^x + 1}$ is the standard logistic function. As an example, Figure \ref{fig:icc} shows item characteristic curves from the 1F 2PL model for the items in Table \ref{tab:example_milestones}. Item characteristic curves show the relationship between $\theta_i$ and $P(y_{ij} = 1)$ for a particular item. These curves reveal that babbling is unrelated to development. On the other hand, finding objects on the floor is highly related to development with most children with $\theta_i$ greater than -1.5 having reached this milestone. 
 
 We primarily focus here on the latent factor structure of children's ability, but we also examined the structure of individual item models. While we use a 2PL model here (which includes difficulty and discrimination parameters), we also explored 3PL models (which add a guessing parameter for each item). Overall, 3PL models did not fit better than 2PL models and so we omit them in the interest of space. For comparison, we do include a 1F Rasch model where all of the discrimination parameters, $a_j$, are set to 1 for each item.
 
@@ -251,7 +251,7 @@ l.format %>%
 
 ## Model comparison {#modelcompare}
 
-Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes or misspecification [@mcdonald1995goodness]. Instead, we use a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
+Model comparison in IRT typically uses information criterion such as AIC and BIC [@maydeu2013goodness]. However, these methods are not guaranteed to work with modest sample sizes or when the models are misspecified [@mcdonald1995goodness]. Instead, we use a marginalized version of cross-validation. In essence, we partition the data into folds based on the children (i.e. the rows of the item response matrix). Then for each fold, we estimate the item parameters using all but that fold, and calculate the likelihood of that fold by integrating over $g(\theta)$. 
 
 Mathematically and following notation similar to @vehtari2017practical, we partition the data into 6 subsets $y^{(k)}$ for $k = 1, \dots, 6$. Each model is fit separately to each training set $y^{(-k)}$ yielding item parameter estimates which we compactly denote $\Psi_j^{(-k)}$. The predictive (i.e. out-of-sample or cross-validated) likelihood of $y^{(k)}$ is
 
@@ -267,7 +267,7 @@ $$
 
 # Results
 
-Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which neccessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison section](#modelcompare). The 3F 2PL model performs best which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
+Table \ref{tab:results} shows the number of parameters, the in-sample log likelihood (which necessarily increases with more parameters), and the $\text{lpl } y$ defined in the [model comparison section](#modelcompare). The 3F 2PL model performs best which is evidence that child development between the ages of 2 and 55 months follows a multidimensional path. 
 
 ```{r results}
 # for latek in kables
@@ -293,7 +293,7 @@ results %>%
 
 To understand each of the three factors in the best performing model, we fit the model to the the full dataset. We then estimate the factor loadings (i.e. discriminations or slopes) using a varimax rotation. The varimax rotation results in orthogonal and, therefore, more interpretable factors [@kaiser1959computer]. Under the varimax rotation, the first factor explains 41% of the variance, the second factor explains 16% of the variance, and the third factor explains 3% of the variance.
 
-Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor loads mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third mainly load positively on linguistic milestones and, interestingly, negatively on physical milestones. 
+Figure \ref{fig:factorloadings} shows the distribution of factor loadings for each group on each of the three factors. The first factor loads mainly on cognitive and linguistic milestones. The second factor is a combination of each of the groups with the strongest loadings on the physical and social & emotional milestones. The third factor mainly loads positively on linguistic milestones and, interestingly, negatively on physical milestones. 
 
 ```{r getfactorloadings, include = FALSE}
 mod_3F_2PL_summary <- 
@@ -416,7 +416,7 @@ model_by_age %>%
 
 ### Age-partitioned models
 
-As another method of examining the dimensionality of child development across the age span, we create four partitions of the data based on the ages of the children. We then cross-validate the 2PL models independently in each partition. This allows us to examine the dimensionality for each age group separately. For each age partition, we drop milestones where less than 2.5% or greater than 97.5% of children have reached the milestone. We drop these milestones because they contain little information and make the models less stable. This process results in, for example, 432 children and 359 milestones in the 13-24 month old partition.
+As another method of examining the dimensionality of child development across the age span, we create four partitions of the data based on the ages of the children. We then cross-validate the 2PL models independently in each partition. This allows us to examine the dimensionality for each age group separately. For each age partition, we drop milestones where less than 2.5% or greater than 97.5% of children have reached the milestone because they contain little information and make the models less stable. This process results in, for example, 432 children and 359 milestones in the 13-24 month old partition.
 
 Figure \ref{fig:partage} shows the results of this analysis. Consistent with our findings in the [previous section](#full), the best fitting model contains a lower dimensional factor structure for younger children. The best fitting model is the 2F 2PL for the partition of data containing children two to 12 months old, whereas the best fitting model is the 3F 2PL for the partitions containing older children.
 
